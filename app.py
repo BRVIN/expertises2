@@ -67,7 +67,11 @@ class WordProcessorApp:
         self.end_word_var = tk.StringVar(value="certificat")
         ttk.Entry(main_frame, textvariable=self.end_word_var, width=30).grid(row=2, column=1, sticky=tk.W, padx=5)
         
-        ttk.Button(main_frame, text="Extract Text", command=self.extract_text).grid(row=2, column=2, padx=5)
+        # Button frame for extraction buttons
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(row=2, column=2, padx=5, sticky=tk.W)
+        ttk.Button(button_frame, text="Extract Text", command=self.extract_text).pack(side=tk.LEFT, padx=2)
+        ttk.Button(button_frame, text="Undo Extraction", command=self.undo_extraction).pack(side=tk.LEFT, padx=2)
         
         # Extracted text display
         ttk.Label(main_frame, text="Extracted Text:").grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
@@ -210,14 +214,55 @@ class WordProcessorApp:
         
         messagebox.showinfo("Success", f"Text extracted successfully!\nCharacters: {len(self.extracted_text)}")
     
+    def undo_extraction(self):
+        """Undo text extraction - clears extracted text and all masking"""
+        if not self.extracted_text:
+            messagebox.showinfo("Info", "No extracted text to undo.")
+            return
+        
+        # Confirm with user
+        if not messagebox.askyesno("Confirm", "This will clear the extracted text and all masking. Continue?"):
+            return
+        
+        # Clear extracted text
+        self.extracted_text = ""
+        self.masked_text = ""
+        
+        # Clear all masking data
+        self.masking_changes = []
+        self.current_changes = []
+        self.name_to_id = {}
+        self.name_occurrences = {}
+        
+        # Clear all text areas
+        self.extracted_text_area.delete(1.0, tk.END)
+        self.masking_preview_area.delete(1.0, tk.END)
+        self.final_text_area.delete(1.0, tk.END)
+        
+        # Clear changes list
+        self.changes_listbox.delete(0, tk.END)
+        
+        messagebox.showinfo("Success", "Extraction undone. All text and masking cleared.")
+    
     def find_name_ignore_case_accent(self, text: str, name: str) -> List[Tuple[int, int, str]]:
         """Find all occurrences of a name ignoring case and accents.
-        Returns list of (start_pos, end_pos, original_text) tuples."""
+        Returns list of (start_pos, end_pos, original_text) tuples.
+        Handles both single-word and multi-word names (e.g., "John" or "John Smith")."""
         normalized_name = self.normalize_text(name)
         results = []
         
-        # Build a pattern that matches word boundaries
-        pattern = r'\b' + re.escape(normalized_name) + r'\b'
+        # Check if name contains spaces (multi-word name)
+        name_has_spaces = ' ' in name
+        
+        if name_has_spaces:
+            # For multi-word names, match the entire phrase with word boundaries at start and end
+            # Escape the name and replace spaces with \s+ to handle multiple spaces
+            escaped_name = re.escape(normalized_name)
+            # Replace escaped spaces with \s+ to handle variable whitespace
+            pattern = r'\b' + escaped_name.replace(r'\ ', r'\s+') + r'\b'
+        else:
+            # For single-word names, use word boundaries
+            pattern = r'\b' + re.escape(normalized_name) + r'\b'
         
         # Normalize the text for searching
         normalized_text = self.normalize_text(text)
@@ -239,19 +284,66 @@ class WordProcessorApp:
             
             # Find corresponding positions in original text
             if norm_start < len(position_map) and norm_end <= len(position_map):
-                orig_start = position_map[norm_start]
-                # For end position, find the end of the word in original text
-                orig_end = position_map[norm_end - 1] + 1 if norm_end > 0 else orig_start
+                orig_start = position_map[norm_start] if norm_start < len(position_map) else position_map[-1]
+                # For end position, find the corresponding position in original text
+                if norm_end > 0 and norm_end <= len(position_map):
+                    orig_end = position_map[norm_end - 1] + 1
+                else:
+                    orig_end = orig_start
                 
-                # Adjust to get the full word
-                # Find word boundaries in original text
-                if orig_start < len(text):
-                    # Find the actual word end
-                    word_end = orig_start
-                    while word_end < len(text) and (text[word_end].isalnum() or text[word_end] in "'-"):
-                        word_end += 1
-                    orig_end = word_end
+                # For multi-word names, we need to find the exact end of the phrase in original text
+                if name_has_spaces:
+                    # Find the end of the full phrase by looking for the last word
+                    # Start from orig_start and find the full phrase
+                    phrase_end = orig_start
+                    words = name.split()
+                    word_count = 0
+                    i = orig_start
                     
+                    # Skip leading whitespace
+                    while i < len(text) and text[i].isspace():
+                        i += 1
+                    
+                    # Try to match all words in the phrase
+                    for word_idx, word in enumerate(words):
+                        if i >= len(text):
+                            break
+                        
+                        # Find the start of this word
+                        word_start = i
+                        # Find the end of this word (alphanumeric + apostrophes/hyphens)
+                        while i < len(text) and (text[i].isalnum() or text[i] in "'-"):
+                            i += 1
+                        word_end = i
+                        
+                        # Check if this word matches (case/accent insensitive)
+                        word_text = text[word_start:word_end]
+                        if self.normalize_text(word_text) == self.normalize_text(word):
+                            word_count += 1
+                            phrase_end = word_end
+                            # Skip whitespace between words
+                            while i < len(text) and text[i].isspace():
+                                i += 1
+                        else:
+                            break
+                    
+                    # If we matched all words, use the phrase_end
+                    if word_count == len(words):
+                        orig_end = phrase_end
+                    else:
+                        # Fallback: use the normalized position mapping
+                        if norm_end > 0 and norm_end <= len(position_map):
+                            orig_end = position_map[norm_end - 1] + 1
+                else:
+                    # For single-word names, find the end of the word
+                    if orig_start < len(text):
+                        word_end = orig_start
+                        while word_end < len(text) and (text[word_end].isalnum() or text[word_end] in "'-"):
+                            word_end += 1
+                        orig_end = word_end
+                
+                # Extract the original text
+                if orig_start < len(text) and orig_end <= len(text):
                     original_text = text[orig_start:orig_end]
                     results.append((orig_start, orig_end, original_text))
         
@@ -569,7 +661,7 @@ class WordProcessorApp:
             
             # Call Claude API (Opus 4.1)
             message = self.client.messages.create(
-                model="claude-opus-4-1-20250805",  # Claude Opus 4.1 model
+                model="claude-opus-4-5-20251101",
                 max_tokens=4096,
                 messages=[
                     {
