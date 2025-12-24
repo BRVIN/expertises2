@@ -14,10 +14,14 @@ class WordProcessorApp:
         self.root.geometry("1200x900")
         
         # API Configuration
-        self.api_key = "your-api-key-here"  # Replace with your actual API key
+        self.api_key = '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'
         self.client = None
-        if self.api_key != "your-api-key-here":
+        if self.api_key:
             self.client = Anthropic(api_key=self.api_key)
+        
+        # Development/Testing: Hardcoded file path (set to None to disable, or provide full path)
+        # Example: self.hardcoded_file_path = r"C:\Users\bob\Documents\test_document.docx"
+        self.hardcoded_file_path = r"C:\Users\bob\Music\test.docx"  # Set this to your test file path for development
         
         # Data storage
         self.full_text = ""
@@ -30,6 +34,15 @@ class WordProcessorApp:
         
         # Create GUI
         self.create_widgets()
+        
+        # Auto-load hardcoded file if specified (for development/testing)
+        if self.hardcoded_file_path:
+            import os
+            if os.path.exists(self.hardcoded_file_path):
+                self.file_path_var.set(self.hardcoded_file_path)
+                self.load_document(self.hardcoded_file_path)
+            else:
+                print(f"Warning: Hardcoded file path does not exist: {self.hardcoded_file_path}")
         
     def create_widgets(self):
         # Main container with padding
@@ -47,11 +60,11 @@ class WordProcessorApp:
         
         # Extraction range section
         ttk.Label(main_frame, text="Start Word (wordA):").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.start_word_var = tk.StringVar(value="wordA")
+        self.start_word_var = tk.StringVar(value="commemoratifs")
         ttk.Entry(main_frame, textvariable=self.start_word_var, width=30).grid(row=1, column=1, sticky=tk.W, padx=5)
         
         ttk.Label(main_frame, text="End Word (wordB):").grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.end_word_var = tk.StringVar(value="wordB")
+        self.end_word_var = tk.StringVar(value="certificat")
         ttk.Entry(main_frame, textvariable=self.end_word_var, width=30).grid(row=2, column=1, sticky=tk.W, padx=5)
         
         ttk.Button(main_frame, text="Extract Text", command=self.extract_text).grid(row=2, column=2, padx=5)
