@@ -88,7 +88,7 @@ class WordProcessorApp:
         ttk.Entry(self.tab1, textvariable=self.start_word_var, width=30).grid(row=1, column=1, sticky=tk.W, padx=5)
         
         ttk.Label(self.tab1, text="End Word (wordB):").grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.end_word_var = tk.StringVar(value="certificat")
+        self.end_word_var = tk.StringVar(value="documents presentes")
         ttk.Entry(self.tab1, textvariable=self.end_word_var, width=30).grid(row=2, column=1, sticky=tk.W, padx=5)
         
         # Button frame for extraction buttons
@@ -161,7 +161,7 @@ class WordProcessorApp:
         
         # API instructions
         ttk.Label(self.tab3, text="Claude API Instructions:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.instructions_var = tk.StringVar(value="summarize this text")
+        self.instructions_var = tk.StringVar(value="Fais un récit chronologique de ce rapport d'expertise medicale. Utilise le discour rapporté. Garde une connotation technique. Fais un récit continu.")
         ttk.Entry(self.tab3, textvariable=self.instructions_var, width=50).grid(row=1, column=1, sticky=(tk.W, tk.E), padx=5)
         ttk.Button(self.tab3, text="Send to Claude API", command=self.send_to_api).grid(row=1, column=2, padx=5)
         
@@ -771,7 +771,7 @@ class WordProcessorApp:
         
         instructions = self.instructions_var.get().strip()
         if not instructions:
-            instructions = "summarize this text"
+            instructions = "Fais un récit chronologique de ce rapport d'expertise medicale. Utilise le discour rapporté. Garde une connotation technique. Fais un récit continu."
         
         try:
             # Show processing message
