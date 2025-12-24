@@ -279,9 +279,10 @@ class WordProcessorApp:
             messagebox.showwarning("Warning", f"End word '{end_word}' not found after start word.")
             return
         
-        end_pos = start_pos + end_pos_relative + len(end_word)
+        # Exclude the end word from extraction - stop at the start of the end word
+        end_pos = start_pos + end_pos_relative
         
-        # Extract text
+        # Extract text (excluding the end word)
         self.extracted_text = self.full_text[start_pos:end_pos]
         self.masked_text = self.extracted_text
         self.masking_changes = []
