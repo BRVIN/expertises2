@@ -50,71 +50,156 @@ class WordProcessorApp:
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=1)
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(0, weight=1)
+        
+        # Create notebook for tabs
+        self.notebook = ttk.Notebook(main_frame)
+        self.notebook.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # Tab 1: Text Extraction
+        self.tab1 = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(self.tab1, text="1. Text Extraction")
+        self.create_tab1()
+        
+        # Tab 2: Name Masking
+        self.tab2 = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(self.tab2, text="2. Name Masking")
+        self.create_tab2()
+        
+        # Tab 3: API & Results
+        self.tab3 = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(self.tab3, text="3. API & Results")
+        self.create_tab3()
+    
+    def create_tab1(self):
+        """Create Tab 1: Text Extraction"""
+        self.tab1.columnconfigure(1, weight=1)
         
         # File upload section
-        ttk.Label(main_frame, text="Word Document:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Label(self.tab1, text="Word Document:").grid(row=0, column=0, sticky=tk.W, pady=5)
         self.file_path_var = tk.StringVar()
-        ttk.Entry(main_frame, textvariable=self.file_path_var, width=50, state="readonly").grid(row=0, column=1, sticky=(tk.W, tk.E), padx=5)
-        ttk.Button(main_frame, text="Browse", command=self.browse_file).grid(row=0, column=2, padx=5)
+        ttk.Entry(self.tab1, textvariable=self.file_path_var, width=50, state="readonly").grid(row=0, column=1, sticky=(tk.W, tk.E), padx=5)
+        ttk.Button(self.tab1, text="Browse", command=self.browse_file).grid(row=0, column=2, padx=5)
         
         # Extraction range section
-        ttk.Label(main_frame, text="Start Word (wordA):").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Label(self.tab1, text="Start Word (wordA):").grid(row=1, column=0, sticky=tk.W, pady=5)
         self.start_word_var = tk.StringVar(value="commemoratifs")
-        ttk.Entry(main_frame, textvariable=self.start_word_var, width=30).grid(row=1, column=1, sticky=tk.W, padx=5)
+        ttk.Entry(self.tab1, textvariable=self.start_word_var, width=30).grid(row=1, column=1, sticky=tk.W, padx=5)
         
-        ttk.Label(main_frame, text="End Word (wordB):").grid(row=2, column=0, sticky=tk.W, pady=5)
+        ttk.Label(self.tab1, text="End Word (wordB):").grid(row=2, column=0, sticky=tk.W, pady=5)
         self.end_word_var = tk.StringVar(value="certificat")
-        ttk.Entry(main_frame, textvariable=self.end_word_var, width=30).grid(row=2, column=1, sticky=tk.W, padx=5)
+        ttk.Entry(self.tab1, textvariable=self.end_word_var, width=30).grid(row=2, column=1, sticky=tk.W, padx=5)
         
         # Button frame for extraction buttons
-        button_frame = ttk.Frame(main_frame)
+        button_frame = ttk.Frame(self.tab1)
         button_frame.grid(row=2, column=2, padx=5, sticky=tk.W)
         ttk.Button(button_frame, text="Extract Text", command=self.extract_text).pack(side=tk.LEFT, padx=2)
         ttk.Button(button_frame, text="Undo Extraction", command=self.undo_extraction).pack(side=tk.LEFT, padx=2)
         
         # Extracted text display (editable)
-        extracted_label_frame = ttk.Frame(main_frame)
+        extracted_label_frame = ttk.Frame(self.tab1)
         extracted_label_frame.grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
         ttk.Label(extracted_label_frame, text="Extracted Text (editable):").pack(side=tk.LEFT)
-        ttk.Button(extracted_label_frame, text="Send to Masking", command=self.sync_to_masking).pack(side=tk.LEFT, padx=5)
-        self.extracted_text_area = scrolledtext.ScrolledText(main_frame, height=8, width=80, wrap=tk.WORD)
-        self.extracted_text_area.grid(row=3, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         
-        # Names to mask section
-        ttk.Label(main_frame, text="Names/Surnames to Mask (comma-separated):").grid(row=4, column=0, sticky=tk.W, pady=5)
-        self.names_var = tk.StringVar()
-        ttk.Entry(main_frame, textvariable=self.names_var, width=50).grid(row=4, column=1, sticky=(tk.W, tk.E), padx=5)
-        ttk.Button(main_frame, text="Apply Masking", command=self.apply_masking).grid(row=4, column=2, padx=5)
+        # Navigation button to next tab
+        nav_frame = ttk.Frame(self.tab1)
+        nav_frame.grid(row=3, column=2, padx=5, sticky=tk.N)
+        ttk.Button(nav_frame, text="Send to Masking →", command=self.sync_to_masking).pack(side=tk.TOP, pady=2)
         
-        # Masking preview
-        ttk.Label(main_frame, text="Masking Preview:").grid(row=5, column=0, sticky=(tk.W, tk.N), pady=5)
-        self.masking_preview_area = scrolledtext.ScrolledText(main_frame, height=8, width=80, wrap=tk.WORD)
-        self.masking_preview_area.grid(row=5, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
-        
-        # Changes list
-        ttk.Label(main_frame, text="Changes (click to undo):").grid(row=6, column=0, sticky=(tk.W, tk.N), pady=5)
-        self.changes_listbox = tk.Listbox(main_frame, height=5, width=50)
-        self.changes_listbox.grid(row=6, column=1, sticky=(tk.W, tk.E), padx=5, pady=5)
-        self.changes_listbox.bind('<Double-Button-1>', self.undo_change)
-        ttk.Button(main_frame, text="Undo Selected", command=self.undo_selected_change).grid(row=6, column=2, padx=5, sticky=tk.N)
-        
-        # API instructions
-        ttk.Label(main_frame, text="Claude API Instructions:").grid(row=7, column=0, sticky=tk.W, pady=5)
-        self.instructions_var = tk.StringVar(value="summarize this text")
-        ttk.Entry(main_frame, textvariable=self.instructions_var, width=50).grid(row=7, column=1, sticky=(tk.W, tk.E), padx=5)
-        ttk.Button(main_frame, text="Send to Claude API", command=self.send_to_api).grid(row=7, column=2, padx=5)
-        
-        # Final text display
-        ttk.Label(main_frame, text="Final Text (from Claude):").grid(row=8, column=0, sticky=(tk.W, tk.N), pady=5)
-        self.final_text_area = scrolledtext.ScrolledText(main_frame, height=8, width=80, wrap=tk.WORD)
-        self.final_text_area.grid(row=8, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
-        ttk.Button(main_frame, text="Copy Final Text", command=self.copy_final_text).grid(row=8, column=2, padx=5, sticky=tk.S)
+        self.extracted_text_area = scrolledtext.ScrolledText(self.tab1, height=15, width=80, wrap=tk.WORD)
+        self.extracted_text_area.grid(row=3, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         
         # Configure grid weights for resizing
-        main_frame.rowconfigure(3, weight=1)
-        main_frame.rowconfigure(5, weight=1)
-        main_frame.rowconfigure(8, weight=1)
+        self.tab1.rowconfigure(3, weight=1)
+    
+    def create_tab2(self):
+        """Create Tab 2: Name Masking"""
+        self.tab2.columnconfigure(1, weight=1)
+        
+        # Navigation button to previous tab
+        nav_frame_top = ttk.Frame(self.tab2)
+        nav_frame_top.grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=5)
+        ttk.Button(nav_frame_top, text="← Back to Extraction", command=self.go_to_extraction_tab).pack(side=tk.LEFT, padx=5)
+        
+        # Names to mask section
+        ttk.Label(self.tab2, text="Names/Surnames to Mask (comma-separated):").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.names_var = tk.StringVar()
+        ttk.Entry(self.tab2, textvariable=self.names_var, width=50).grid(row=1, column=1, sticky=(tk.W, tk.E), padx=5)
+        ttk.Button(self.tab2, text="Apply Masking", command=self.apply_masking).grid(row=1, column=2, padx=5)
+        
+        # Masking preview
+        ttk.Label(self.tab2, text="Masking Preview:").grid(row=2, column=0, sticky=(tk.W, tk.N), pady=5)
+        self.masking_preview_area = scrolledtext.ScrolledText(self.tab2, height=10, width=80, wrap=tk.WORD)
+        self.masking_preview_area.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
+        
+        # Changes list
+        ttk.Label(self.tab2, text="Changes (click to undo):").grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
+        changes_frame = ttk.Frame(self.tab2)
+        changes_frame.grid(row=3, column=1, sticky=(tk.W, tk.E), padx=5, pady=5)
+        self.changes_listbox = tk.Listbox(changes_frame, height=5, width=50)
+        self.changes_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.changes_listbox.bind('<Double-Button-1>', self.undo_change)
+        ttk.Button(changes_frame, text="Undo Selected", command=self.undo_selected_change).pack(side=tk.LEFT, padx=5)
+        
+        # Navigation button to next tab
+        nav_frame_bottom = ttk.Frame(self.tab2)
+        nav_frame_bottom.grid(row=4, column=0, columnspan=3, sticky=tk.E, pady=10)
+        ttk.Button(nav_frame_bottom, text="Continue to API →", command=self.go_to_api_tab).pack(side=tk.RIGHT, padx=5)
+        
+        # Configure grid weights for resizing
+        self.tab2.rowconfigure(2, weight=1)
+    
+    def create_tab3(self):
+        """Create Tab 3: API & Results"""
+        self.tab3.columnconfigure(1, weight=1)
+        
+        # Navigation button to previous tab
+        nav_frame_top = ttk.Frame(self.tab3)
+        nav_frame_top.grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=5)
+        ttk.Button(nav_frame_top, text="← Back to Masking", command=self.go_to_masking_tab).pack(side=tk.LEFT, padx=5)
+        
+        # API instructions
+        ttk.Label(self.tab3, text="Claude API Instructions:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.instructions_var = tk.StringVar(value="summarize this text")
+        ttk.Entry(self.tab3, textvariable=self.instructions_var, width=50).grid(row=1, column=1, sticky=(tk.W, tk.E), padx=5)
+        ttk.Button(self.tab3, text="Send to Claude API", command=self.send_to_api).grid(row=1, column=2, padx=5)
+        
+        # Final text display
+        ttk.Label(self.tab3, text="Final Text (from Claude):").grid(row=2, column=0, sticky=(tk.W, tk.N), pady=5)
+        final_text_frame = ttk.Frame(self.tab3)
+        final_text_frame.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
+        self.final_text_area = scrolledtext.ScrolledText(final_text_frame, height=15, width=80, wrap=tk.WORD)
+        self.final_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        ttk.Button(final_text_frame, text="Copy Final Text", command=self.copy_final_text).pack(side=tk.LEFT, padx=5)
+        
+        # Configure grid weights for resizing
+        self.tab3.rowconfigure(2, weight=1)
+    
+    def go_to_extraction_tab(self):
+        """Navigate to Tab 1: Text Extraction"""
+        self.notebook.select(0)
+    
+    def go_to_masking_tab(self):
+        """Navigate to Tab 2: Name Masking"""
+        # Sync extracted text to masking if needed (read from text area to get any edits)
+        if self.extracted_text_area.get(1.0, tk.END).strip():
+            # Get current text from the text area (may have been edited)
+            current_text = self.extracted_text_area.get(1.0, tk.END).rstrip('\n')
+            if current_text:
+                # Update extracted_text with current text from widget
+                self.extracted_text = current_text
+                # Update masked_text if not already set or if text changed
+                if not self.masked_text or self.masked_text != self.extracted_text:
+                    self.masked_text = self.extracted_text
+                    # Update the masking preview
+                    self.masking_preview_area.delete(1.0, tk.END)
+                    self.masking_preview_area.insert(1.0, self.masked_text)
+        self.notebook.select(1)
+    
+    def go_to_api_tab(self):
+        """Navigate to Tab 3: API & Results"""
+        self.notebook.select(2)
         
     def normalize_text(self, text: str) -> str:
         """Normalize text to remove accents and convert to lowercase for comparison"""
@@ -278,6 +363,8 @@ class WordProcessorApp:
         self.masking_preview_area.delete(1.0, tk.END)
         self.masking_preview_area.insert(1.0, self.masked_text)
         
+        # Navigate to masking tab
+        self.go_to_masking_tab()
         messagebox.showinfo("Success", "Text synced to masking preview. You can now apply masking.")
     
     def find_name_ignore_case_accent(self, text: str, name: str) -> List[Tuple[int, int, str]]:
