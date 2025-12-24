@@ -73,8 +73,11 @@ class WordProcessorApp:
         ttk.Button(button_frame, text="Extract Text", command=self.extract_text).pack(side=tk.LEFT, padx=2)
         ttk.Button(button_frame, text="Undo Extraction", command=self.undo_extraction).pack(side=tk.LEFT, padx=2)
         
-        # Extracted text display
-        ttk.Label(main_frame, text="Extracted Text:").grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
+        # Extracted text display (editable)
+        extracted_label_frame = ttk.Frame(main_frame)
+        extracted_label_frame.grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
+        ttk.Label(extracted_label_frame, text="Extracted Text (editable):").pack(side=tk.LEFT)
+        ttk.Button(extracted_label_frame, text="Send to Masking", command=self.sync_to_masking).pack(side=tk.LEFT, padx=5)
         self.extracted_text_area = scrolledtext.ScrolledText(main_frame, height=8, width=80, wrap=tk.WORD)
         self.extracted_text_area.grid(row=3, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         
@@ -243,6 +246,39 @@ class WordProcessorApp:
         self.changes_listbox.delete(0, tk.END)
         
         messagebox.showinfo("Success", "Extraction undone. All text and masking cleared.")
+    
+    def sync_to_masking(self):
+        """Sync the edited extracted text to the masking preview"""
+        # Get the current text from the extracted text area
+        edited_text = self.extracted_text_area.get(1.0, tk.END).rstrip('\n')
+        
+        if not edited_text.strip():
+            messagebox.showwarning("Warning", "Extracted text area is empty.")
+            return
+        
+        # Update the extracted_text variable with the edited text
+        self.extracted_text = edited_text
+        
+        # Clear any existing masking when syncing new text
+        # Ask user if they want to keep existing masking
+        if self.current_changes:
+            if not messagebox.askyesno("Confirm", "This will clear all existing masking. Continue?"):
+                return
+            # Clear all masking data
+            self.masking_changes = []
+            self.current_changes = []
+            self.name_to_id = {}
+            self.name_occurrences = {}
+            self.changes_listbox.delete(0, tk.END)
+        
+        # Update masked_text to match the edited extracted text
+        self.masked_text = self.extracted_text
+        
+        # Update the masking preview
+        self.masking_preview_area.delete(1.0, tk.END)
+        self.masking_preview_area.insert(1.0, self.masked_text)
+        
+        messagebox.showinfo("Success", "Text synced to masking preview. You can now apply masking.")
     
     def find_name_ignore_case_accent(self, text: str, name: str) -> List[Tuple[int, int, str]]:
         """Find all occurrences of a name ignoring case and accents.
