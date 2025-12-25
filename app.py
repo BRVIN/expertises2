@@ -870,9 +870,19 @@ class WordProcessorApp:
             for change in reversed(self.current_changes):
                 restored_text = restored_text.replace(change['masked'], change['original'])
             
+            # Add indentation (1 tab) at the beginning of every paragraph
+            paragraphs = restored_text.split('\n')
+            indented_paragraphs = []
+            for para in paragraphs:
+                if para.strip():  # Only indent non-empty paragraphs
+                    indented_paragraphs.append('\t' + para)
+                else:
+                    indented_paragraphs.append(para)  # Keep empty lines as-is
+            indented_text = '\n'.join(indented_paragraphs)
+            
             # Display final text
             self.final_text_area.delete(1.0, tk.END)
-            self.final_text_area.insert(1.0, restored_text)
+            self.final_text_area.insert(1.0, indented_text)
             
             messagebox.showinfo("Success", "Text processed successfully by Claude API!")
             
