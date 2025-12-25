@@ -21,7 +21,8 @@ class WordProcessorApp:
         
         # Development/Testing: Hardcoded file path (set to None to disable, or provide full path)
         # Example: self.hardcoded_file_path = r"C:\Users\bob\Documents\test_document.docx"
-        self.hardcoded_file_path = r"C:\Users\bob\Music\test.docx"  # Set this to your test file path for development
+        #self.hardcoded_file_path = r"C:\Users\bob\Music\test.docx"  # Set this to your test file path for development
+        self.hardcoded_file_path = None
         
         # Data storage
         self.full_text = ""
@@ -249,7 +250,26 @@ class WordProcessorApp:
         try:
             doc = docx.Document(file_path)
             self.full_text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
-            messagebox.showinfo("Success", f"Document loaded successfully!\nTotal characters: {len(self.full_text)}")
+            
+            # Automatically extract the entire document content initially
+            self.extracted_text = self.full_text
+            self.masked_text = self.full_text
+            
+            # Clear any existing masking data
+            self.masking_changes = []
+            self.current_changes = []
+            self.name_to_id = {}
+            self.name_occurrences = {}
+            
+            # Display the full text in the extracted text area
+            self.extracted_text_area.delete(1.0, tk.END)
+            self.extracted_text_area.insert(1.0, self.extracted_text)
+            
+            # Clear masking preview and changes list
+            self.masking_preview_area.delete(1.0, tk.END)
+            self.changes_listbox.delete(0, tk.END)
+            
+            messagebox.showinfo("Success", f"Document loaded successfully!\nTotal characters: {len(self.full_text)}\nFull document content extracted.")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load document: {str(e)}")
     
