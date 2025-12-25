@@ -48,6 +48,10 @@ class WordProcessorApp:
         self.instructions_dict = {}  # Dictionary to store instructions: {label: text}
         self.current_instruction_label = "basic"
         
+        # Conversation history for chat functionality
+        self.conversation_history = []  # List of messages: [{"role": "user"/"assistant", "content": "..."}]
+        self.is_first_message = True  # Track if this is the first API call
+        
         # Load saved instructions
         self.load_instructions()
         
@@ -240,9 +244,24 @@ class WordProcessorApp:
         ttk.Label(self.tab3, text="Final Text (from Claude):").grid(row=4, column=0, sticky=(tk.W, tk.N), pady=5)
         final_text_frame = ttk.Frame(self.tab3)
         final_text_frame.grid(row=4, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
-        self.final_text_area = scrolledtext.ScrolledText(final_text_frame, height=15, width=80, wrap=tk.WORD)
+        self.final_text_area = scrolledtext.ScrolledText(final_text_frame, height=12, width=80, wrap=tk.WORD)
         self.final_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ttk.Button(final_text_frame, text="Copy Final Text", command=self.copy_final_text).pack(side=tk.LEFT, padx=5)
+        
+        # Chat input section (below final text)
+        chat_label_frame = ttk.Frame(self.tab3)
+        chat_label_frame.grid(row=5, column=0, columnspan=3, sticky=tk.W, pady=5)
+        ttk.Label(chat_label_frame, text="Continue conversation:").pack(side=tk.LEFT, padx=5)
+        
+        chat_input_frame = ttk.Frame(self.tab3)
+        chat_input_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E), padx=5, pady=5)
+        chat_input_frame.columnconfigure(0, weight=1)
+        
+        self.chat_input = ttk.Entry(chat_input_frame, width=60)
+        self.chat_input.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=5)
+        self.chat_input.bind('<Return>', lambda e: self.send_chat_message())
+        ttk.Button(chat_input_frame, text="Send", command=self.send_chat_message).grid(row=0, column=1, padx=5)
+        ttk.Button(chat_input_frame, text="Clear History", command=self.clear_conversation_history).grid(row=0, column=2, padx=5)
         
         # Configure grid weights for resizing
         self.tab3.rowconfigure(2, weight=1)
@@ -865,7 +884,7 @@ class WordProcessorApp:
         messagebox.showinfo("Success", f"All occurrences of the selected name have been undone.")
     
     def send_to_api(self):
-        """Send masked text to Claude API"""
+        """Send masked text to Claude API (initial request)"""
         if not self.masked_text:
             messagebox.showwarning("Warning", "Please extract and mask text first.")
             return
@@ -879,31 +898,70 @@ class WordProcessorApp:
         if not instructions:
             instructions = "Fais un récit chronologique de ce rapport d'expertise medicale. Utilise le discour rapporté. Garde une connotation technique. Fais un récit continu."
         
+        # Clear conversation history for new request
+        self.conversation_history = []
+        self.is_first_message = True
+        
+        # Prepare the initial prompt
+        prompt = f"{instructions}\n\nText:\n{self.masked_text}"
+        
+        # Send the message
+        self._send_api_message(prompt, is_first=True)
+    
+    def send_chat_message(self):
+        """Send a follow-up message in the chat conversation"""
+        if not self.masked_text:
+            messagebox.showwarning("Warning", "Please extract and mask text first.")
+            return
+        
+        if not self.client:
+            messagebox.showerror("Error", "API key not configured. Please set your API key in the code.")
+            return
+        
+        # Get chat input
+        chat_message = self.chat_input.get().strip()
+        if not chat_message:
+            messagebox.showwarning("Warning", "Please enter a message.")
+            return
+        
+        # Clear the input field
+        self.chat_input.delete(0, tk.END)
+        
+        # Send the message
+        self._send_api_message(chat_message, is_first=False)
+    
+    def _send_api_message(self, user_message: str, is_first: bool = False):
+        """Internal method to send message to Claude API and handle response"""
         try:
             # Show processing message
-            self.final_text_area.delete(1.0, tk.END)
-            self.final_text_area.insert(1.0, "Processing... Please wait.")
+            if is_first:
+                self.final_text_area.delete(1.0, tk.END)
+            self.final_text_area.insert(tk.END, "\n\nProcessing... Please wait.")
             self.root.update()
             
-            # Prepare the prompt
-            prompt = f"{instructions}\n\nText:\n{self.masked_text}"
+            # Add user message to conversation history
+            self.conversation_history.append({
+                "role": "user",
+                "content": user_message
+            })
             
-            # Call Claude API (Opus 4.1)
+            # Call Claude API with full conversation history
             message = self.client.messages.create(
                 model="claude-opus-4-5-20251101",
                 max_tokens=64000,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
+                messages=self.conversation_history
             )
             
             # Get response
             response_text = message.content[0].text if message.content else ""
             
-            # Restore masked names
+            # Add assistant response to conversation history
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": response_text
+            })
+            
+            # Restore masked names in response
             restored_text = response_text
             for change in reversed(self.current_changes):
                 restored_text = restored_text.replace(change['masked'], change['original'])
@@ -918,16 +976,56 @@ class WordProcessorApp:
                     indented_paragraphs.append(para)  # Keep empty lines as-is
             indented_text = '\n'.join(indented_paragraphs)
             
-            # Display final text
-            self.final_text_area.delete(1.0, tk.END)
-            self.final_text_area.insert(1.0, indented_text)
+            # Display final text (replace "Processing..." if first message, otherwise append)
+            if is_first:
+                self.final_text_area.delete(1.0, tk.END)
+                self.final_text_area.insert(1.0, indented_text)
+            else:
+                # Remove "Processing..." message and append new response
+                content = self.final_text_area.get(1.0, tk.END)
+                if "Processing... Please wait." in content:
+                    # Find and remove the processing message
+                    lines = content.split('\n')
+                    new_lines = []
+                    skip_processing = False
+                    for line in lines:
+                        if "Processing... Please wait." in line:
+                            skip_processing = True
+                            continue
+                        if skip_processing and line.strip() == "":
+                            continue
+                        skip_processing = False
+                        new_lines.append(line)
+                    self.final_text_area.delete(1.0, tk.END)
+                    self.final_text_area.insert(1.0, '\n'.join(new_lines).rstrip())
+                
+                # Append new response
+                self.final_text_area.insert(tk.END, "\n\n" + indented_text)
+                # Scroll to bottom
+                self.final_text_area.see(tk.END)
             
-            messagebox.showinfo("Success", "Text processed successfully by Claude API!")
+            self.is_first_message = False
+            messagebox.showinfo("Success", "Message processed successfully by Claude API!")
             
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to process text with Claude API: {str(e)}")
+            messagebox.showerror("Error", f"Failed to process message with Claude API: {str(e)}")
+            if is_first:
+                self.final_text_area.delete(1.0, tk.END)
+                self.final_text_area.insert(1.0, f"Error: {str(e)}")
+            else:
+                self.final_text_area.insert(tk.END, f"\n\nError: {str(e)}")
+    
+    def clear_conversation_history(self):
+        """Clear the conversation history"""
+        if not self.conversation_history:
+            messagebox.showinfo("Info", "No conversation history to clear.")
+            return
+        
+        if messagebox.askyesno("Confirm", "Clear conversation history? This will reset the chat."):
+            self.conversation_history = []
+            self.is_first_message = True
             self.final_text_area.delete(1.0, tk.END)
-            self.final_text_area.insert(1.0, f"Error: {str(e)}")
+            messagebox.showinfo("Success", "Conversation history cleared.")
     
     def copy_final_text(self):
         """Copy final text to clipboard"""
