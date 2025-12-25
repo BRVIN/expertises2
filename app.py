@@ -806,7 +806,7 @@ class WordProcessorApp:
             # Call Claude API (Opus 4.1)
             message = self.client.messages.create(
                 model="claude-opus-4-5-20251101",
-                max_tokens=4096,
+                max_tokens=64000,
                 messages=[
                     {
                         "role": "user",
