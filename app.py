@@ -48,12 +48,18 @@ class WordProcessorApp:
         self.instructions_dict = {}  # Dictionary to store instructions: {label: text}
         self.current_instruction_label = "basic"
         
+        # Chat messages storage
+        self.chat_file = "chat.txt"
+        self.chat_dict = {}  # Dictionary to store chat messages: {label: text}
+        self.current_chat_label = "basic"
+        
         # Conversation history for chat functionality
         self.conversation_history = []  # List of messages: [{"role": "user"/"assistant", "content": "..."}]
         self.is_first_message = True  # Track if this is the first API call
         
-        # Load saved instructions
+        # Load saved instructions and chat messages
         self.load_instructions()
+        self.load_chat_messages()
         
         # Create GUI
         self.create_widgets()
@@ -248,13 +254,31 @@ class WordProcessorApp:
         self.final_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ttk.Button(final_text_frame, text="Copy Final Text", command=self.copy_final_text).pack(side=tk.LEFT, padx=5)
         
-        # Chat input section (below final text)
+        # Chat messages section (below final text)
         chat_label_frame = ttk.Frame(self.tab3)
         chat_label_frame.grid(row=5, column=0, columnspan=3, sticky=tk.W, pady=5)
         ttk.Label(chat_label_frame, text="Continue conversation:").pack(side=tk.LEFT, padx=5)
         
+        # Chat message template selection
+        chat_template_frame = ttk.Frame(self.tab3)
+        chat_template_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
+        ttk.Label(chat_template_frame, text="Chat Message Label:").pack(side=tk.LEFT, padx=5)
+        self.chat_label_var = tk.StringVar()
+        self.chat_label_combo = ttk.Combobox(chat_template_frame, textvariable=self.chat_label_var, 
+                                               width=20, state="readonly")
+        self.chat_label_combo.pack(side=tk.LEFT, padx=5)
+        self.chat_label_combo.bind('<<ComboboxSelected>>', self.on_chat_label_selected)
+        
+        # Buttons for managing chat messages
+        chat_buttons_frame = ttk.Frame(chat_template_frame)
+        chat_buttons_frame.pack(side=tk.LEFT, padx=10)
+        ttk.Button(chat_buttons_frame, text="Save", command=self.save_chat_message).pack(side=tk.LEFT, padx=2)
+        ttk.Button(chat_buttons_frame, text="Create New", command=self.create_new_chat_message).pack(side=tk.LEFT, padx=2)
+        ttk.Button(chat_buttons_frame, text="Delete", command=self.delete_chat_message).pack(side=tk.LEFT, padx=2)
+        
+        # Chat input section
         chat_input_frame = ttk.Frame(self.tab3)
-        chat_input_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E), padx=5, pady=5)
+        chat_input_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E), padx=5, pady=5)
         chat_input_frame.columnconfigure(0, weight=1)
         
         self.chat_input = ttk.Entry(chat_input_frame, width=60)
@@ -262,6 +286,12 @@ class WordProcessorApp:
         self.chat_input.bind('<Return>', lambda e: self.send_chat_message())
         ttk.Button(chat_input_frame, text="Send", command=self.send_chat_message).grid(row=0, column=1, padx=5)
         ttk.Button(chat_input_frame, text="Clear History", command=self.clear_conversation_history).grid(row=0, column=2, padx=5)
+        
+        # Update chat combo and load default
+        self.update_chat_combo()
+        if "basic" in self.chat_dict:
+            self.chat_label_var.set("basic")
+            self.on_chat_label_selected()
         
         # Configure grid weights for resizing
         self.tab3.rowconfigure(2, weight=1)
@@ -1024,6 +1054,137 @@ class WordProcessorApp:
         self.root.clipboard_clear()
         self.root.clipboard_append(final_text)
         messagebox.showinfo("Success", "Text copied to clipboard!")
+    
+    def load_chat_messages(self):
+        """Load saved chat messages from chat.txt file"""
+        try:
+            if os.path.exists(self.chat_file):
+                with open(self.chat_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        # Parse format: "label" :: "text"
+                        if ' :: ' in line:
+                            parts = line.split(' :: ', 1)
+                            if len(parts) == 2:
+                                label = parts[0].strip().strip('"')
+                                text = parts[1].strip().strip('"')
+                                # Handle escaped quotes and newlines
+                                text = text.replace('\\n', '\n').replace('\\"', '"')
+                                self.chat_dict[label] = text
+            else:
+                # Initialize with default "basic" chat message
+                self.chat_dict = {"basic": ""}
+                self.save_chat_messages()
+        except Exception as e:
+            print(f"Error loading chat messages: {e}")
+            # Initialize with default "basic" chat message
+            self.chat_dict = {"basic": ""}
+            self.save_chat_messages()
+    
+    def save_chat_messages(self):
+        """Save chat messages to chat.txt file"""
+        try:
+            with open(self.chat_file, 'w', encoding='utf-8') as f:
+                for label, text in sorted(self.chat_dict.items()):
+                    # Escape quotes and newlines for storage
+                    escaped_text = text.replace('"', '\\"').replace('\n', '\\n')
+                    f.write(f'"{label}" :: "{escaped_text}"\n')
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save chat messages: {str(e)}")
+    
+    def update_chat_combo(self):
+        """Update the chat label combobox with current labels"""
+        labels = sorted(self.chat_dict.keys())
+        self.chat_label_combo['values'] = labels
+        if labels:
+            # Set current label if available
+            if self.current_chat_label in labels:
+                self.chat_label_var.set(self.current_chat_label)
+            else:
+                self.chat_label_var.set(labels[0])
+                self.current_chat_label = labels[0]
+    
+    def on_chat_label_selected(self, event=None):
+        """Handle chat label selection from combobox"""
+        selected_label = self.chat_label_var.get()
+        if selected_label and selected_label in self.chat_dict:
+            chat_text = self.chat_dict[selected_label]
+            self.chat_input.delete(0, tk.END)
+            self.chat_input.insert(0, chat_text)
+            self.current_chat_label = selected_label
+    
+    def save_chat_message(self):
+        """Save current chat input to the selected label"""
+        selected_label = self.chat_label_var.get()
+        if not selected_label:
+            messagebox.showwarning("Warning", "Please select a label.")
+            return
+        
+        # Get current text from chat input
+        chat_text = self.chat_input.get().strip()
+        
+        # Save to dictionary
+        self.chat_dict[selected_label] = chat_text
+        self.save_chat_messages()
+        self.current_chat_label = selected_label
+        messagebox.showinfo("Success", f"Chat message '{selected_label}' saved successfully.")
+    
+    def create_new_chat_message(self):
+        """Create a new chat message label with blank text"""
+        new_label = simpledialog.askstring("Create New Chat Message", "Enter label name:")
+        if not new_label or not new_label.strip():
+            return
+        
+        new_label = new_label.strip()
+        
+        # Check if label already exists
+        if new_label in self.chat_dict:
+            messagebox.showwarning("Warning", f"Label '{new_label}' already exists.")
+            return
+        
+        # Create new chat message with blank text
+        self.chat_dict[new_label] = ""
+        self.save_chat_messages()
+        
+        # Update combo and select new label
+        self.update_chat_combo()
+        self.chat_label_var.set(new_label)
+        self.on_chat_label_selected()
+        
+        messagebox.showinfo("Success", f"New chat message label '{new_label}' created.")
+    
+    def delete_chat_message(self):
+        """Delete the selected chat message label with warning"""
+        selected_label = self.chat_label_var.get()
+        if not selected_label:
+            messagebox.showwarning("Warning", "Please select a label to delete.")
+            return
+        
+        # Prevent deleting "basic" if it's the only one
+        if selected_label == "basic" and len(self.chat_dict) == 1:
+            messagebox.showwarning("Warning", "Cannot delete the 'basic' chat message. At least one message must exist.")
+            return
+        
+        # Show warning dialog
+        if not messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete the chat message label '{selected_label}'?\n\nThis action cannot be undone."):
+            return
+        
+        # Delete the chat message
+        del self.chat_dict[selected_label]
+        self.save_chat_messages()
+        
+        # Update combo and select another label
+        self.update_chat_combo()
+        if self.chat_dict:
+            # Select first available label
+            first_label = sorted(self.chat_dict.keys())[0]
+            self.chat_label_var.set(first_label)
+            self.on_chat_label_selected()
+        
+        messagebox.showinfo("Success", f"Chat message label '{selected_label}' deleted.")
     
     def load_instructions(self):
         """Load saved instructions from instructions.txt file"""

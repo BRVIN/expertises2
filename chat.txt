@@ -1,0 +1,3 @@
+"animal" :: "quel est ton animal prefere et pourquoi ?"
+"basic" :: "Comment tu vas ?"
+"meteo" :: "quelle est ta meteo preferee ?"
