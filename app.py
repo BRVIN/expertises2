@@ -927,6 +927,9 @@ class WordProcessorApp:
         # Clear the input field
         self.chat_input.delete(0, tk.END)
         
+        # Clear final text area before new chat request
+        self.final_text_area.delete(1.0, tk.END)
+        
         # Send the message
         self._send_api_message(chat_message, is_first=False)
     
@@ -934,9 +937,8 @@ class WordProcessorApp:
         """Internal method to send message to Claude API and handle response"""
         try:
             # Show processing message
-            if is_first:
-                self.final_text_area.delete(1.0, tk.END)
-            self.final_text_area.insert(tk.END, "\n\nProcessing... Please wait.")
+            # Note: Final text area is already cleared in send_to_api or send_chat_message
+            self.final_text_area.insert(tk.END, "Processing... Please wait.")
             self.root.update()
             
             # Add user message to conversation history
@@ -976,44 +978,29 @@ class WordProcessorApp:
                     indented_paragraphs.append(para)  # Keep empty lines as-is
             indented_text = '\n'.join(indented_paragraphs)
             
-            # Display final text (replace "Processing..." if first message, otherwise append)
-            if is_first:
+            # Replace "Processing..." message with response
+            content = self.final_text_area.get(1.0, tk.END)
+            if "Processing... Please wait." in content:
                 self.final_text_area.delete(1.0, tk.END)
                 self.final_text_area.insert(1.0, indented_text)
             else:
-                # Remove "Processing..." message and append new response
-                content = self.final_text_area.get(1.0, tk.END)
-                if "Processing... Please wait." in content:
-                    # Find and remove the processing message
-                    lines = content.split('\n')
-                    new_lines = []
-                    skip_processing = False
-                    for line in lines:
-                        if "Processing... Please wait." in line:
-                            skip_processing = True
-                            continue
-                        if skip_processing and line.strip() == "":
-                            continue
-                        skip_processing = False
-                        new_lines.append(line)
-                    self.final_text_area.delete(1.0, tk.END)
-                    self.final_text_area.insert(1.0, '\n'.join(new_lines).rstrip())
-                
-                # Append new response
-                self.final_text_area.insert(tk.END, "\n\n" + indented_text)
-                # Scroll to bottom
-                self.final_text_area.see(tk.END)
+                # Fallback: just replace all content
+                self.final_text_area.delete(1.0, tk.END)
+                self.final_text_area.insert(1.0, indented_text)
+            
+            # Scroll to bottom
+            self.final_text_area.see(tk.END)
             
             self.is_first_message = False
             messagebox.showinfo("Success", "Message processed successfully by Claude API!")
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to process message with Claude API: {str(e)}")
-            if is_first:
+            # Remove processing message and show error
+            content = self.final_text_area.get(1.0, tk.END)
+            if "Processing... Please wait." in content:
                 self.final_text_area.delete(1.0, tk.END)
-                self.final_text_area.insert(1.0, f"Error: {str(e)}")
-            else:
-                self.final_text_area.insert(tk.END, f"\n\nError: {str(e)}")
+            self.final_text_area.insert(1.0, f"Error: {str(e)}")
     
     def clear_conversation_history(self):
         """Clear the conversation history"""
