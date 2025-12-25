@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, scrolledtext, messagebox
+from tkinter import ttk, filedialog, scrolledtext, messagebox, simpledialog
 import docx
 from anthropic import Anthropic
 import re
@@ -42,6 +42,14 @@ class WordProcessorApp:
         self.current_changes = []  # Current list of changes for undo
         self.name_to_id = {}  # Maps normalized name to its unique ID
         self.name_occurrences = {}  # Maps normalized name to list of occurrences
+        
+        # Instructions storage
+        self.instructions_file = "instructions.txt"
+        self.instructions_dict = {}  # Dictionary to store instructions: {label: text}
+        self.current_instruction_label = "basic"
+        
+        # Load saved instructions
+        self.load_instructions()
         
         # Create GUI
         self.create_widgets()
@@ -194,22 +202,51 @@ class WordProcessorApp:
         nav_frame_top.grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=5)
         ttk.Button(nav_frame_top, text="← Back to Masking", command=self.go_to_masking_tab).pack(side=tk.LEFT, padx=5)
         
-        # API instructions
-        ttk.Label(self.tab3, text="Claude API Instructions:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.instructions_var = tk.StringVar(value="Fais un récit chronologique de ce rapport d'expertise medicale. Utilise le discour rapporté. Garde une connotation technique. Fais un récit continu.")
-        ttk.Entry(self.tab3, textvariable=self.instructions_var, width=50).grid(row=1, column=1, sticky=(tk.W, tk.E), padx=5)
-        ttk.Button(self.tab3, text="Send to Claude API", command=self.send_to_api).grid(row=1, column=2, padx=5)
+        # API instructions section
+        instructions_label_frame = ttk.Frame(self.tab3)
+        instructions_label_frame.grid(row=1, column=0, columnspan=3, sticky=tk.W, pady=5)
+        ttk.Label(instructions_label_frame, text="Claude API Instructions:").pack(side=tk.LEFT, padx=5)
+        
+        # Instruction label selection
+        ttk.Label(instructions_label_frame, text="Label:").pack(side=tk.LEFT, padx=5)
+        self.instruction_label_var = tk.StringVar()
+        self.instruction_label_combo = ttk.Combobox(instructions_label_frame, textvariable=self.instruction_label_var, 
+                                                    width=20, state="readonly")
+        self.instruction_label_combo.pack(side=tk.LEFT, padx=5)
+        self.instruction_label_combo.bind('<<ComboboxSelected>>', self.on_instruction_label_selected)
+        
+        # Buttons for managing instructions
+        buttons_frame = ttk.Frame(instructions_label_frame)
+        buttons_frame.pack(side=tk.LEFT, padx=10)
+        ttk.Button(buttons_frame, text="Save", command=self.save_instruction).pack(side=tk.LEFT, padx=2)
+        ttk.Button(buttons_frame, text="Create New", command=self.create_new_instruction).pack(side=tk.LEFT, padx=2)
+        ttk.Button(buttons_frame, text="Delete", command=self.delete_instruction).pack(side=tk.LEFT, padx=2)
+        
+        # Instruction text area (editable)
+        ttk.Label(self.tab3, text="Instruction Text:").grid(row=2, column=0, sticky=(tk.W, tk.N), pady=5)
+        self.instructions_text_area = scrolledtext.ScrolledText(self.tab3, height=5, width=80, wrap=tk.WORD)
+        self.instructions_text_area.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
+        
+        # Send button
+        ttk.Button(self.tab3, text="Send to Claude API", command=self.send_to_api).grid(row=3, column=1, columnspan=2, pady=5)
+        
+        # Update instruction combo and load default
+        self.update_instruction_combo()
+        if "basic" in self.instructions_dict:
+            self.instruction_label_var.set("basic")
+            self.on_instruction_label_selected()
         
         # Final text display
-        ttk.Label(self.tab3, text="Final Text (from Claude):").grid(row=2, column=0, sticky=(tk.W, tk.N), pady=5)
+        ttk.Label(self.tab3, text="Final Text (from Claude):").grid(row=4, column=0, sticky=(tk.W, tk.N), pady=5)
         final_text_frame = ttk.Frame(self.tab3)
-        final_text_frame.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
+        final_text_frame.grid(row=4, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         self.final_text_area = scrolledtext.ScrolledText(final_text_frame, height=15, width=80, wrap=tk.WORD)
         self.final_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ttk.Button(final_text_frame, text="Copy Final Text", command=self.copy_final_text).pack(side=tk.LEFT, padx=5)
         
         # Configure grid weights for resizing
         self.tab3.rowconfigure(2, weight=1)
+        self.tab3.rowconfigure(4, weight=1)
     
     def go_to_extraction_tab(self):
         """Navigate to Tab 1: Text Extraction"""
@@ -837,7 +874,8 @@ class WordProcessorApp:
             messagebox.showerror("Error", "API key not configured. Please set your API key in the code.")
             return
         
-        instructions = self.instructions_var.get().strip()
+        # Get instructions from text area
+        instructions = self.instructions_text_area.get(1.0, tk.END).strip()
         if not instructions:
             instructions = "Fais un récit chronologique de ce rapport d'expertise medicale. Utilise le discour rapporté. Garde une connotation technique. Fais un récit continu."
         
@@ -901,6 +939,139 @@ class WordProcessorApp:
         self.root.clipboard_clear()
         self.root.clipboard_append(final_text)
         messagebox.showinfo("Success", "Text copied to clipboard!")
+    
+    def load_instructions(self):
+        """Load saved instructions from instructions.txt file"""
+        try:
+            if os.path.exists(self.instructions_file):
+                with open(self.instructions_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        # Parse format: "label" :: "text"
+                        if ' :: ' in line:
+                            parts = line.split(' :: ', 1)
+                            if len(parts) == 2:
+                                label = parts[0].strip().strip('"')
+                                text = parts[1].strip().strip('"')
+                                # Handle escaped quotes and newlines
+                                text = text.replace('\\n', '\n').replace('\\"', '"')
+                                self.instructions_dict[label] = text
+            else:
+                # Initialize with default "basic" instruction
+                default_text = "Fais un récit chronologique de ce rapport d'expertise medicale. Utilise le discour rapporté. Garde une connotation technique. Fais un récit continu."
+                self.instructions_dict = {"basic": default_text}
+                self.save_instructions()
+        except Exception as e:
+            print(f"Error loading instructions: {e}")
+            # Initialize with default "basic" instruction
+            default_text = "Fais un récit chronologique de ce rapport d'expertise medicale. Utilise le discour rapporté. Garde une connotation technique. Fais un récit continu."
+            self.instructions_dict = {"basic": default_text}
+            self.save_instructions()
+    
+    def save_instructions(self):
+        """Save instructions to instructions.txt file"""
+        try:
+            with open(self.instructions_file, 'w', encoding='utf-8') as f:
+                for label, text in sorted(self.instructions_dict.items()):
+                    # Escape quotes and newlines for storage
+                    escaped_text = text.replace('"', '\\"').replace('\n', '\\n')
+                    f.write(f'"{label}" :: "{escaped_text}"\n')
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save instructions: {str(e)}")
+    
+    def update_instruction_combo(self):
+        """Update the instruction label combobox with current labels"""
+        labels = sorted(self.instructions_dict.keys())
+        self.instruction_label_combo['values'] = labels
+        if labels:
+            # Set current label if available
+            if self.current_instruction_label in labels:
+                self.instruction_label_var.set(self.current_instruction_label)
+            else:
+                self.instruction_label_var.set(labels[0])
+                self.current_instruction_label = labels[0]
+    
+    def on_instruction_label_selected(self, event=None):
+        """Handle instruction label selection from combobox"""
+        selected_label = self.instruction_label_var.get()
+        if selected_label and selected_label in self.instructions_dict:
+            instruction_text = self.instructions_dict[selected_label]
+            self.instructions_text_area.delete(1.0, tk.END)
+            self.instructions_text_area.insert(1.0, instruction_text)
+            self.current_instruction_label = selected_label
+    
+    def save_instruction(self):
+        """Save current instruction text to the selected label"""
+        selected_label = self.instruction_label_var.get()
+        if not selected_label:
+            messagebox.showwarning("Warning", "Please select a label.")
+            return
+        
+        # Get current text from text area
+        instruction_text = self.instructions_text_area.get(1.0, tk.END).strip()
+        
+        # Save to dictionary
+        self.instructions_dict[selected_label] = instruction_text
+        self.save_instructions()
+        self.current_instruction_label = selected_label
+        messagebox.showinfo("Success", f"Instruction '{selected_label}' saved successfully.")
+    
+    def create_new_instruction(self):
+        """Create a new instruction label with blank text"""
+        new_label = simpledialog.askstring("Create New Instruction", "Enter label name:")
+        if not new_label or not new_label.strip():
+            return
+        
+        new_label = new_label.strip()
+        
+        # Check if label already exists
+        if new_label in self.instructions_dict:
+            messagebox.showwarning("Warning", f"Label '{new_label}' already exists.")
+            return
+        
+        # Create new instruction with blank text
+        self.instructions_dict[new_label] = ""
+        self.save_instructions()
+        
+        # Update combo and select new label
+        self.update_instruction_combo()
+        self.instruction_label_var.set(new_label)
+        self.on_instruction_label_selected()
+        
+        messagebox.showinfo("Success", f"New instruction label '{new_label}' created.")
+    
+    def delete_instruction(self):
+        """Delete the selected instruction label with warning"""
+        selected_label = self.instruction_label_var.get()
+        if not selected_label:
+            messagebox.showwarning("Warning", "Please select a label to delete.")
+            return
+        
+        # Prevent deleting "basic" if it's the only one
+        if selected_label == "basic" and len(self.instructions_dict) == 1:
+            messagebox.showwarning("Warning", "Cannot delete the 'basic' instruction. At least one instruction must exist.")
+            return
+        
+        # Show warning dialog
+        if not messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete the instruction label '{selected_label}'?\n\nThis action cannot be undone."):
+            return
+        
+        # Delete the instruction
+        del self.instructions_dict[selected_label]
+        self.save_instructions()
+        
+        # Update combo and select another label
+        self.update_instruction_combo()
+        if self.instructions_dict:
+            # Select first available label
+            first_label = sorted(self.instructions_dict.keys())[0]
+            self.instruction_label_var.set(first_label)
+            self.on_instruction_label_selected()
+        
+        messagebox.showinfo("Success", f"Instruction label '{selected_label}' deleted.")
 
 
 def main():
