@@ -281,7 +281,7 @@ class WordProcessorApp:
         ttk.Label(self.tab3, text="Final Text (from LLM):").grid(row=5, column=0, sticky=(tk.W, tk.N), pady=5)
         final_text_frame = ttk.Frame(self.tab3)
         final_text_frame.grid(row=5, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
-        self.final_text_area = scrolledtext.ScrolledText(final_text_frame, height=12, width=80, wrap=tk.WORD)
+        self.final_text_area = scrolledtext.ScrolledText(final_text_frame, height=30, width=80, wrap=tk.WORD)
         self.final_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ttk.Button(final_text_frame, text="Copy Final Text", command=self.copy_final_text).pack(side=tk.LEFT, padx=5)
         
@@ -327,6 +327,7 @@ class WordProcessorApp:
         # Configure grid weights for resizing
         self.tab3.rowconfigure(2, weight=1)
         self.tab3.rowconfigure(4, weight=1)
+        self.tab3.rowconfigure(5, weight=2)  # Give more weight to final text area
     
     def go_to_extraction_tab(self):
         """Navigate to Tab 1: Text Extraction"""
