@@ -193,7 +193,7 @@ class WordProcessorApp:
         # Navigation button to previous tab
         nav_frame_top = ttk.Frame(self.tab2)
         nav_frame_top.grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=5)
-        ttk.Button(nav_frame_top, text="← BACK", command=self.go_to_extraction_tab).pack(side=tk.LEFT, padx=5)
+        ttk.Button(nav_frame_top, text="← Back", command=self.go_to_extraction_tab).pack(side=tk.LEFT, padx=5)
         
         # Names to mask section
         ttk.Label(self.tab2, text="Names:").grid(row=1, column=0, sticky=tk.W, pady=5)
@@ -230,7 +230,7 @@ class WordProcessorApp:
         # Navigation button to previous tab
         nav_frame_top = ttk.Frame(self.tab3)
         nav_frame_top.grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=5)
-        ttk.Button(nav_frame_top, text="← Back to Masking", command=self.go_to_masking_tab).pack(side=tk.LEFT, padx=5)
+        ttk.Button(nav_frame_top, text="← Back", command=self.go_to_masking_tab).pack(side=tk.LEFT, padx=5)
         
         # API instructions section
         # Model selection (top right)
@@ -246,7 +246,7 @@ class WordProcessorApp:
         
         instructions_label_frame = ttk.Frame(self.tab3)
         instructions_label_frame.grid(row=2, column=0, columnspan=3, sticky=tk.W, pady=5)
-        ttk.Label(instructions_label_frame, text="LLM API Instructions:").pack(side=tk.LEFT, padx=5)
+        ttk.Label(instructions_label_frame, text=".").pack(side=tk.LEFT, padx=5)
         
         # Instruction label selection
         ttk.Label(instructions_label_frame, text="Label:").pack(side=tk.LEFT, padx=5)
@@ -264,12 +264,12 @@ class WordProcessorApp:
         ttk.Button(buttons_frame, text="Delete", command=self.delete_instruction).pack(side=tk.LEFT, padx=2)
         
         # Instruction text area (editable)
-        ttk.Label(self.tab3, text="Instruction Text:").grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
+        ttk.Label(self.tab3, text="Instructions:").grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
         self.instructions_text_area = scrolledtext.ScrolledText(self.tab3, height=5, width=80, wrap=tk.WORD)
         self.instructions_text_area.grid(row=3, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         
         # Send button
-        ttk.Button(self.tab3, text="Send to LLM API", command=self.send_to_api).grid(row=4, column=1, columnspan=2, pady=5)
+        ttk.Button(self.tab3, text="SEND", command=self.send_to_api).grid(row=4, column=1, columnspan=2, pady=5)
         
         # Update instruction combo and load default
         self.update_instruction_combo()
@@ -278,12 +278,12 @@ class WordProcessorApp:
             self.on_instruction_label_selected()
         
         # Final text display
-        ttk.Label(self.tab3, text="Final Text (from LLM):").grid(row=5, column=0, sticky=(tk.W, tk.N), pady=5)
+        ttk.Label(self.tab3, text="Result:").grid(row=5, column=0, sticky=(tk.W, tk.N), pady=5)
         final_text_frame = ttk.Frame(self.tab3)
         final_text_frame.grid(row=5, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         self.final_text_area = scrolledtext.ScrolledText(final_text_frame, height=30, width=80, wrap=tk.WORD)
         self.final_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        ttk.Button(final_text_frame, text="Copy Final Text", command=self.copy_final_text).pack(side=tk.LEFT, padx=5)
+        ttk.Button(final_text_frame, text="COPY", command=self.copy_final_text).pack(side=tk.LEFT, padx=5)
         
         # Chat messages section (below final text)
         chat_label_frame = ttk.Frame(self.tab3)
@@ -316,7 +316,7 @@ class WordProcessorApp:
         self.chat_input.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=5)
         self.chat_input.bind('<Return>', lambda e: self.send_chat_message())
         ttk.Button(chat_input_frame, text="Send", command=self.send_chat_message).grid(row=0, column=1, padx=5)
-        ttk.Button(chat_input_frame, text="Clear History", command=self.clear_conversation_history).grid(row=0, column=2, padx=5)
+        ttk.Button(chat_input_frame, text="Clear", command=self.clear_conversation_history).grid(row=0, column=2, padx=5)
         
         # Update chat combo and load default
         self.update_chat_combo()
