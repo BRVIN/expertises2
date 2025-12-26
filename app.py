@@ -1134,10 +1134,10 @@ class WordProcessorApp:
         if not self.conversation_history:
             return
         
-        if messagebox.askyesno("Confirm", "Clear conversation history? This will reset the chat."):
-            self.conversation_history = []
-            self.is_first_message = True
-            self.final_text_area.delete(1.0, tk.END)
+        #if messagebox.askyesno("Confirm", "CLEAR ?"):
+        self.conversation_history = []
+        self.is_first_message = True
+        self.final_text_area.delete(1.0, tk.END)
     
     def copy_final_text(self):
         """Copy final text to clipboard"""
