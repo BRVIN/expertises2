@@ -154,7 +154,7 @@ class WordProcessorApp:
         
         # Tab 1: Text Extraction
         self.tab1 = ttk.Frame(self.notebook, padding="10")
-        self.notebook.add(self.tab1, text="1. EXTRACTION")
+        self.notebook.add(self.tab1, text="1. EXTRACTION.")
         self.create_tab1()
         
         # Tab 2: Name Masking
