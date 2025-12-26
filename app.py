@@ -156,29 +156,29 @@ class WordProcessorApp:
             hint_label.grid(row=1, column=1, sticky=tk.W, padx=5)
         
         # Extraction range section
-        ttk.Label(self.tab1, text="Start Word (wordA):").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Label(self.tab1, text="Start:").grid(row=1, column=0, sticky=tk.W, pady=5)
         self.start_word_var = tk.StringVar(value="commemoratifs")
         ttk.Entry(self.tab1, textvariable=self.start_word_var, width=30).grid(row=1, column=1, sticky=tk.W, padx=5)
         
-        ttk.Label(self.tab1, text="End Word (wordB):").grid(row=2, column=0, sticky=tk.W, pady=5)
+        ttk.Label(self.tab1, text="End:").grid(row=2, column=0, sticky=tk.W, pady=5)
         self.end_word_var = tk.StringVar(value="documents presentes")
         ttk.Entry(self.tab1, textvariable=self.end_word_var, width=30).grid(row=2, column=1, sticky=tk.W, padx=5)
         
         # Button frame for extraction buttons
         button_frame = ttk.Frame(self.tab1)
         button_frame.grid(row=2, column=2, padx=5, sticky=tk.W)
-        ttk.Button(button_frame, text="Extract Text", command=self.extract_text).pack(side=tk.LEFT, padx=2)
-        ttk.Button(button_frame, text="Undo Extraction", command=self.undo_extraction).pack(side=tk.LEFT, padx=2)
+        ttk.Button(button_frame, text="Extract", command=self.extract_text).pack(side=tk.LEFT, padx=2)
+        ttk.Button(button_frame, text="Undo", command=self.undo_extraction).pack(side=tk.LEFT, padx=2)
         
         # Extracted text display (editable)
         extracted_label_frame = ttk.Frame(self.tab1)
         extracted_label_frame.grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
-        ttk.Label(extracted_label_frame, text="Extracted Text (editable):").pack(side=tk.LEFT)
+        ttk.Label(extracted_label_frame, text=".:").pack(side=tk.LEFT)
         
         # Navigation button to next tab
         nav_frame = ttk.Frame(self.tab1)
         nav_frame.grid(row=3, column=2, padx=5, sticky=tk.N)
-        ttk.Button(nav_frame, text="Send to Masking →", command=self.sync_to_masking).pack(side=tk.TOP, pady=2)
+        ttk.Button(nav_frame, text="CONTINUE →", command=self.sync_to_masking).pack(side=tk.TOP, pady=2)
         
         self.extracted_text_area = scrolledtext.ScrolledText(self.tab1, height=15, width=80, wrap=tk.WORD)
         self.extracted_text_area.grid(row=3, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
@@ -196,10 +196,10 @@ class WordProcessorApp:
         ttk.Button(nav_frame_top, text="← BACK", command=self.go_to_extraction_tab).pack(side=tk.LEFT, padx=5)
         
         # Names to mask section
-        ttk.Label(self.tab2, text="Names/Surnames to Mask (comma-separated):").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Label(self.tab2, text="Names:").grid(row=1, column=0, sticky=tk.W, pady=5)
         self.names_var = tk.StringVar()
         ttk.Entry(self.tab2, textvariable=self.names_var, width=50).grid(row=1, column=1, sticky=(tk.W, tk.E), padx=5)
-        ttk.Button(self.tab2, text="Apply Masking", command=self.apply_masking).grid(row=1, column=2, padx=5)
+        ttk.Button(self.tab2, text="APPLY", command=self.apply_masking).grid(row=1, column=2, padx=5)
         
         # Masking preview
         ttk.Label(self.tab2, text=".").grid(row=2, column=0, sticky=(tk.W, tk.N), pady=5)
@@ -213,7 +213,7 @@ class WordProcessorApp:
         self.changes_listbox = tk.Listbox(changes_frame, height=5, width=50)
         self.changes_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.changes_listbox.bind('<Double-Button-1>', self.undo_change)
-        ttk.Button(changes_frame, text="Undo Selected", command=self.undo_selected_change).pack(side=tk.LEFT, padx=5)
+        ttk.Button(changes_frame, text="Cancel", command=self.undo_selected_change).pack(side=tk.LEFT, padx=5)
         
         # Navigation button to next tab
         nav_frame_bottom = ttk.Frame(self.tab2)
