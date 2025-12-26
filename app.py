@@ -309,7 +309,7 @@ class WordProcessorApp:
         
         # Chat input section
         chat_input_frame = ttk.Frame(self.tab3)
-        chat_input_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E), padx=5, pady=5)
+        chat_input_frame.grid(row=8, column=0, columnspan=3, sticky=(tk.W, tk.E), padx=5, pady=5)
         chat_input_frame.columnconfigure(0, weight=1)
         
         self.chat_input = ttk.Entry(chat_input_frame, width=60)
