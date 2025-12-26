@@ -26,7 +26,7 @@ class LLMProvider(ABC):
     """Abstract base class for LLM providers"""
     
     @abstractmethod
-    def send_message(self, messages: List[Dict[str, str]], model: str, max_tokens: int = 64000) -> str:
+    def send_message(self, messages: List[Dict[str, str]], model: str, max_tokens: int = 64000, stream: bool = False, stream_callback = None) -> str:
         """
         Send a message to the LLM and return the response.
         
@@ -34,6 +34,8 @@ class LLMProvider(ABC):
             messages: List of message dicts with 'role' and 'content' keys
             model: Model identifier string
             max_tokens: Maximum tokens in response
+            stream: If True, stream the response incrementally
+            stream_callback: Callback function(text_chunk) called for each chunk if streaming
             
         Returns:
             Response text as string
@@ -66,7 +68,7 @@ class ClaudeProvider(LLMProvider):
             "claude-sonnet-4-5-20250929", # Claude Sonnet 4.5
         ]
     
-    def send_message(self, messages: List[Dict[str, str]], model: str, max_tokens: int = 64000) -> str:
+    def send_message(self, messages: List[Dict[str, str]], model: str, max_tokens: int = 64000, stream: bool = False, stream_callback = None) -> str:
         """Send message to Claude API"""
         if not self.validate_model(model):
             raise ValueError(f"Invalid Claude model: {model}")
@@ -80,16 +82,31 @@ class ClaudeProvider(LLMProvider):
                 "content": msg["content"]
             })
         
-        response = self.client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            messages=claude_messages
-        )
-        
-        # Extract text from response
-        if response.content and len(response.content) > 0:
-            return response.content[0].text
-        return ""
+        if stream and stream_callback:
+            # Streaming mode
+            full_text = ""
+            with self.client.messages.stream(
+                model=model,
+                max_tokens=max_tokens,
+                messages=claude_messages
+            ) as stream_response:
+                for text_event in stream_response.text_stream:
+                    if text_event:
+                        full_text += text_event
+                        stream_callback(text_event)
+            return full_text
+        else:
+            # Non-streaming mode
+            response = self.client.messages.create(
+                model=model,
+                max_tokens=max_tokens,
+                messages=claude_messages
+            )
+            
+            # Extract text from response
+            if response.content and len(response.content) > 0:
+                return response.content[0].text
+            return ""
     
     def get_available_models(self) -> List[str]:
         """Return list of available Claude models"""
@@ -130,7 +147,7 @@ class OpenAIProvider(LLMProvider):
             "gpt-5.2-pro"
         }
     
-    def send_message(self, messages: List[Dict[str, str]], model: str, max_tokens: int = 64000) -> str:
+    def send_message(self, messages: List[Dict[str, str]], model: str, max_tokens: int = 64000, stream: bool = False, stream_callback = None) -> str:
         """Send message to OpenAI API"""
         if not self.validate_model(model):
             raise ValueError(f"Invalid OpenAI model: {model}")
@@ -340,16 +357,34 @@ class OpenAIProvider(LLMProvider):
             return ""
         else:
             # Use chat/completions endpoint for standard chat models
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_completion_tokens=max_tokens
-            )
-            
-            # Extract text from response
-            if response.choices and len(response.choices) > 0:
-                return response.choices[0].message.content
-            return ""
+            if stream and stream_callback:
+                # Streaming mode
+                full_text = ""
+                stream_response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_completion_tokens=max_tokens,
+                    stream=True
+                )
+                for chunk in stream_response:
+                    if chunk.choices and len(chunk.choices) > 0:
+                        delta = chunk.choices[0].delta
+                        if hasattr(delta, 'content') and delta.content:
+                            full_text += delta.content
+                            stream_callback(delta.content)
+                return full_text
+            else:
+                # Non-streaming mode
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_completion_tokens=max_tokens
+                )
+                
+                # Extract text from response
+                if response.choices and len(response.choices) > 0:
+                    return response.choices[0].message.content
+                return ""
     
     def get_available_models(self) -> List[str]:
         """Return list of available OpenAI models"""

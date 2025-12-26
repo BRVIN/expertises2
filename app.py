@@ -1048,8 +1048,8 @@ class WordProcessorApp:
                 messagebox.showerror("Error", f"No provider found for model: {self.selected_model}")
                 return
             
-            # Show processing message
-            # Note: Final text area is already cleared in send_to_api or send_chat_message
+            # Clear final text area and show processing message
+            self.final_text_area.delete(1.0, tk.END)
             self.final_text_area.insert(tk.END, "Processing... Please wait.")
             self.root.update()
             
@@ -1059,11 +1059,56 @@ class WordProcessorApp:
                 "content": user_message
             })
             
-            # Call LLM API with full conversation history using abstraction layer
+            # Track accumulated text for formatting
+            accumulated_text = ""
+            is_first_chunk = True
+            
+            def stream_callback(text_chunk):
+                """Callback function to handle streaming text chunks"""
+                nonlocal accumulated_text, is_first_chunk
+                
+                if not text_chunk:
+                    return
+                
+                # Add chunk to accumulated text
+                accumulated_text += text_chunk
+                
+                # Restore masked names in accumulated text
+                restored_text = accumulated_text
+                for change in reversed(self.current_changes):
+                    restored_text = restored_text.replace(change['masked'], change['original'])
+                
+                # Format text with indentation
+                # Split into paragraphs and indent
+                paragraphs = restored_text.split('\n')
+                formatted_paragraphs = []
+                for para in paragraphs:
+                    if para.strip():  # Only indent non-empty paragraphs
+                        formatted_paragraphs.append('\t' + para)
+                    else:
+                        formatted_paragraphs.append(para)  # Keep empty lines as-is
+                formatted_text = '\n'.join(formatted_paragraphs)
+                
+                # Update UI with formatted text
+                if is_first_chunk:
+                    # Replace "Processing..." message
+                    self.final_text_area.delete(1.0, tk.END)
+                    is_first_chunk = False
+                else:
+                    # Clear and update with full accumulated text
+                    self.final_text_area.delete(1.0, tk.END)
+                
+                self.final_text_area.insert(1.0, formatted_text)
+                self.final_text_area.see(tk.END)
+                self.root.update()  # Update UI to show incremental text
+            
+            # Call LLM API with streaming enabled
             response_text = provider.send_message(
                 messages=self.conversation_history,
                 model=self.selected_model,
-                max_tokens=64000
+                max_tokens=64000,
+                stream=True,
+                stream_callback=stream_callback
             )
             
             # Add assistant response to conversation history
@@ -1071,34 +1116,6 @@ class WordProcessorApp:
                 "role": "assistant",
                 "content": response_text
             })
-            
-            # Restore masked names in response
-            restored_text = response_text
-            for change in reversed(self.current_changes):
-                restored_text = restored_text.replace(change['masked'], change['original'])
-            
-            # Add indentation (1 tab) at the beginning of every paragraph
-            paragraphs = restored_text.split('\n')
-            indented_paragraphs = []
-            for para in paragraphs:
-                if para.strip():  # Only indent non-empty paragraphs
-                    indented_paragraphs.append('\t' + para)
-                else:
-                    indented_paragraphs.append(para)  # Keep empty lines as-is
-            indented_text = '\n'.join(indented_paragraphs)
-            
-            # Replace "Processing..." message with response
-            content = self.final_text_area.get(1.0, tk.END)
-            if "Processing... Please wait." in content:
-                self.final_text_area.delete(1.0, tk.END)
-                self.final_text_area.insert(1.0, indented_text)
-            else:
-                # Fallback: just replace all content
-                self.final_text_area.delete(1.0, tk.END)
-                self.final_text_area.insert(1.0, indented_text)
-            
-            # Scroll to bottom
-            self.final_text_area.see(tk.END)
             
             self.is_first_message = False
             model_display = self.llm_registry.get_model_display_name(self.selected_model)
