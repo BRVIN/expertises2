@@ -438,7 +438,6 @@ class WordProcessorApp:
             self.masking_preview_area.delete(1.0, tk.END)
             self.changes_listbox.delete(0, tk.END)
             
-            messagebox.showinfo("Success", f"Document loaded successfully!\nTotal characters: {len(self.full_text)}\nFull document content extracted.")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load document: {str(e)}")
     
@@ -490,12 +489,10 @@ class WordProcessorApp:
         # Clear changes list
         self.changes_listbox.delete(0, tk.END)
         
-        messagebox.showinfo("Success", f"Text extracted successfully!\nCharacters: {len(self.extracted_text)}")
     
     def undo_extraction(self):
         """Undo text extraction - clears extracted text and all masking"""
         if not self.extracted_text:
-            messagebox.showinfo("Info", "No extracted text to undo.")
             return
         
         # Confirm with user
@@ -520,7 +517,6 @@ class WordProcessorApp:
         # Clear changes list
         self.changes_listbox.delete(0, tk.END)
         
-        messagebox.showinfo("Success", "Extraction undone. All text and masking cleared.")
     
     def sync_to_masking(self):
         """Sync the edited extracted text to the masking preview"""
@@ -555,7 +551,6 @@ class WordProcessorApp:
         
         # Navigate to masking tab
         self.go_to_masking_tab()
-        messagebox.showinfo("Success", "Text synced to masking preview. You can now apply masking.")
     
     def find_name_ignore_case_accent(self, text: str, name: str) -> List[Tuple[int, int, str]]:
         """Find all occurrences of a name ignoring case and accents.
@@ -790,7 +785,6 @@ class WordProcessorApp:
             self.name_occurrences[normalized_name] = name_occurrence_list
         
         if not new_changes:
-            messagebox.showinfo("Info", "No new occurrences found to mask.")
             return
         
         # Add to changes list
@@ -807,7 +801,6 @@ class WordProcessorApp:
         # Update changes listbox
         self.update_changes_listbox()
         
-        messagebox.showinfo("Success", f"Masking applied to {total_occurrences} occurrence(s) of {len([n for n in names if self.normalize_text(n) in self.name_to_id])} name(s).")
     
     def rebuild_masked_text(self):
         """Rebuild masked text from extracted_text using all current changes"""
@@ -947,7 +940,6 @@ class WordProcessorApp:
         # Update changes listbox
         self.update_changes_listbox()
         
-        messagebox.showinfo("Success", f"All occurrences of the selected name have been undone.")
     
     def send_to_api(self):
         """Send masked text to Claude API (initial request)"""
@@ -1067,7 +1059,6 @@ class WordProcessorApp:
             
             self.is_first_message = False
             model_display = self.llm_registry.get_model_display_name(self.selected_model)
-            messagebox.showinfo("Success", f"Message processed successfully by {model_display}!")
             
         except Exception as e:
             model_display = self.llm_registry.get_model_display_name(self.selected_model) if self.selected_model else "LLM"
@@ -1081,14 +1072,12 @@ class WordProcessorApp:
     def clear_conversation_history(self):
         """Clear the conversation history"""
         if not self.conversation_history:
-            messagebox.showinfo("Info", "No conversation history to clear.")
             return
         
         if messagebox.askyesno("Confirm", "Clear conversation history? This will reset the chat."):
             self.conversation_history = []
             self.is_first_message = True
             self.final_text_area.delete(1.0, tk.END)
-            messagebox.showinfo("Success", "Conversation history cleared.")
     
     def copy_final_text(self):
         """Copy final text to clipboard"""
@@ -1099,7 +1088,6 @@ class WordProcessorApp:
         
         self.root.clipboard_clear()
         self.root.clipboard_append(final_text)
-        messagebox.showinfo("Success", "Text copied to clipboard!")
     
     def load_chat_messages(self):
         """Load saved chat messages from chat.txt file"""
@@ -1176,7 +1164,6 @@ class WordProcessorApp:
         self.chat_dict[selected_label] = chat_text
         self.save_chat_messages()
         self.current_chat_label = selected_label
-        messagebox.showinfo("Success", f"Chat message '{selected_label}' saved successfully.")
     
     def create_new_chat_message(self):
         """Create a new chat message label with blank text"""
@@ -1200,7 +1187,6 @@ class WordProcessorApp:
         self.chat_label_var.set(new_label)
         self.on_chat_label_selected()
         
-        messagebox.showinfo("Success", f"New chat message label '{new_label}' created.")
     
     def delete_chat_message(self):
         """Delete the selected chat message label with warning"""
@@ -1230,7 +1216,6 @@ class WordProcessorApp:
             self.chat_label_var.set(first_label)
             self.on_chat_label_selected()
         
-        messagebox.showinfo("Success", f"Chat message label '{selected_label}' deleted.")
     
     def load_instructions(self):
         """Load saved instructions from instructions.txt file"""
@@ -1349,7 +1334,6 @@ class WordProcessorApp:
         self.instructions_dict[selected_label] = instruction_text
         self.save_instructions()
         self.current_instruction_label = selected_label
-        messagebox.showinfo("Success", f"Instruction '{selected_label}' saved successfully.")
     
     def create_new_instruction(self):
         """Create a new instruction label with blank text"""
@@ -1373,7 +1357,6 @@ class WordProcessorApp:
         self.instruction_label_var.set(new_label)
         self.on_instruction_label_selected()
         
-        messagebox.showinfo("Success", f"New instruction label '{new_label}' created.")
     
     def delete_instruction(self):
         """Delete the selected instruction label with warning"""
@@ -1403,7 +1386,6 @@ class WordProcessorApp:
             self.instruction_label_var.set(first_label)
             self.on_instruction_label_selected()
         
-        messagebox.showinfo("Success", f"Instruction label '{selected_label}' deleted.")
 
 
 def main():
