@@ -23,9 +23,10 @@ class WordProcessorApp:
         self.root.title("Word Document Processor with LLM API")
         self.root.geometry("1200x900")
         
-        # API Configuration - Separate keys for Claude and OpenAI
-        self.claude_api_key = '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'
-        self.openai_api_key = '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'
+        # Load API keys from private.txt
+        self.claude_api_key = None
+        self.openai_api_key = None
+        self.load_api_keys()
         
         # Initialize LLM Registry
         self.llm_registry = LLMModelRegistry()
@@ -92,7 +93,35 @@ class WordProcessorApp:
                 self.load_document(self.hardcoded_file_path)
             else:
                 print(f"Warning: Hardcoded file path does not exist: {self.hardcoded_file_path}")
+    
+    def load_api_keys(self):
+        """Load API keys from private.txt file"""
+        private_file = "private.txt"
         
+        if not os.path.exists(private_file):
+            messagebox.showerror("Error", f"API keys file '{private_file}' not found in the root folder.\n\nPlease create '{private_file}' with the following format:\nclaude_api_key=your_claude_key_here\nopenai_api_key=your_openai_key_here")
+            return
+        
+        try:
+            with open(private_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    
+                    # Parse format: key_name=value
+                    if '=' in line:
+                        key_name, value = line.split('=', 1)
+                        key_name = key_name.strip()
+                        value = value.strip()
+                        
+                        if key_name == 'claude_api_key':
+                            self.claude_api_key = value
+                        elif key_name == 'openai_api_key':
+                            self.openai_api_key = value
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to read API keys from '{private_file}': {str(e)}")
+    
     def create_widgets(self):
         # Main container with padding
         main_frame = ttk.Frame(self.root, padding="10")
