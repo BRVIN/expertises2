@@ -23,6 +23,21 @@ class WordProcessorApp:
         self.root.title("Word Document Processor with LLM API")
         self.root.geometry("1200x900")
         
+        # Model display name configuration - Easy to customize model names in dropdown
+        # Format: "model_id": "Display Name"
+        # Leave empty dict {} to use default generated names
+        # Example: "claude-opus-4-5-20251101": "Claude Opus 4.5"
+        self.model_display_names_custom = {
+            # Claude models
+             "claude-opus-4-5-20251101": "Claude OPUS ***",
+             "claude-haiku-4-5-20251001": "Claude HAIKU *",
+             "claude-sonnet-4-5-20250929": "Claude SONNET **",
+            # OpenAI models
+             "gpt-5.2-pro": "Chatgpt PRO ***",
+             "gpt-5.2": "Chatgpt CLASSIC **",
+             "gpt-5-nano": "Chatgpt NANO *",
+        }
+        
         # Load API keys from private.txt
         self.claude_api_key = None
         self.openai_api_key = None
@@ -1297,7 +1312,11 @@ class WordProcessorApp:
         display_values = []
         model_display_map = {}  # Map display name to model ID
         for model in available_models:
-            display_name = self.llm_registry.get_model_display_name(model)
+            # Check if custom display name is configured, otherwise use default
+            if model in self.model_display_names_custom:
+                display_name = self.model_display_names_custom[model]
+            else:
+                display_name = self.llm_registry.get_model_display_name(model)
             display_values.append(display_name)
             model_display_map[display_name] = model
         
@@ -1306,12 +1325,19 @@ class WordProcessorApp:
         
         # Set default selection if not already set
         if self.selected_model and self.selected_model in available_models:
-            display_name = self.llm_registry.get_model_display_name(self.selected_model)
+            # Use custom display name if configured
+            if self.selected_model in self.model_display_names_custom:
+                display_name = self.model_display_names_custom[self.selected_model]
+            else:
+                display_name = self.llm_registry.get_model_display_name(self.selected_model)
             self.model_var.set(display_name)
         else:
             # Select first model
             self.selected_model = available_models[0]
-            display_name = self.llm_registry.get_model_display_name(self.selected_model)
+            if self.selected_model in self.model_display_names_custom:
+                display_name = self.model_display_names_custom[self.selected_model]
+            else:
+                display_name = self.llm_registry.get_model_display_name(self.selected_model)
             self.model_var.set(display_name)
     
     def on_model_selected(self, event=None):
