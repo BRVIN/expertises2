@@ -22,6 +22,8 @@ class WordProcessorApp:
         self.root = root
         self.root.title("Word Document Processor with LLM API")
         self.root.geometry("1200x900")
+        # Set minimum window size to prevent elements from disappearing on smaller screens
+        self.root.minsize(800, 600)
         
         # Model display name configuration - Easy to customize model names in dropdown
         # Format: "model_id": "Display Name"
@@ -309,7 +311,7 @@ class WordProcessorApp:
         
         # Instruction text area (editable)
         ttk.Label(self.tab3, text="Instructions:").grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
-        self.instructions_text_area = scrolledtext.ScrolledText(self.tab3, height=5, width=80, wrap=tk.WORD)
+        self.instructions_text_area = scrolledtext.ScrolledText(self.tab3, height=6, width=80, wrap=tk.WORD)
         self.instructions_text_area.grid(row=3, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         
         # Send button
@@ -325,7 +327,7 @@ class WordProcessorApp:
         ttk.Label(self.tab3, text="Result:").grid(row=5, column=0, sticky=(tk.W, tk.N), pady=5)
         final_text_frame = ttk.Frame(self.tab3)
         final_text_frame.grid(row=5, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
-        self.final_text_area = scrolledtext.ScrolledText(final_text_frame, height=30, width=80, wrap=tk.WORD)
+        self.final_text_area = scrolledtext.ScrolledText(final_text_frame, height=29, width=80, wrap=tk.WORD)
         self.final_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ttk.Button(final_text_frame, text="COPY", command=self.copy_final_text).pack(side=tk.LEFT, padx=5)
         
@@ -369,9 +371,10 @@ class WordProcessorApp:
             self.on_chat_label_selected()
         
         # Configure grid weights for resizing
-        self.tab3.rowconfigure(2, weight=1)
-        self.tab3.rowconfigure(4, weight=1)
-        self.tab3.rowconfigure(5, weight=2)  # Give more weight to final text area
+        # Only give weight to rows with expandable content (text areas)
+        self.tab3.rowconfigure(3, weight=1)  # Instruction text area
+        self.tab3.rowconfigure(5, weight=2)  # Final text area (more weight)
+        # Rows 0, 1, 2, 4, 6, 7, 8 have no weight (fixed size elements)
     
     def go_to_extraction_tab(self):
         """Navigate to Tab 1: Text Extraction"""
