@@ -1,2 +1,0 @@
-"basic" :: "Fais un récit chronologique de ce rapport d'expertise medicale. Utilise le discour rapporté. Garde une connotation technique. Fais un récit continu."
-"justice" :: "Fais un resume"

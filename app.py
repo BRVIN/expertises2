@@ -1,11 +1,11 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, scrolledtext, messagebox, simpledialog
 import docx
-from anthropic import Anthropic
 import re
 from typing import List, Tuple, Optional
 import unicodedata
 import os
+from llm_providers import LLMModelRegistry, ClaudeProvider, OpenAIProvider
 
 # Try to import tkinterdnd2 for drag-and-drop support
 # DISABLED FOR NOW - Keep commented for later use
@@ -22,14 +22,34 @@ DND_AVAILABLE = False  # Disabled for now
 class WordProcessorApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Word Document Processor with Claude API")
+        self.root.title("Word Document Processor with LLM API")
         self.root.geometry("1200x900")
         
-        # API Configuration
-        self.api_key = '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'
-        self.client = None
-        if self.api_key:
-            self.client = Anthropic(api_key=self.api_key)
+        # API Configuration - Separate keys for Claude and OpenAI
+        self.claude_api_key = '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'
+        self.openai_api_key = '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'
+        
+        # Initialize LLM Registry
+        self.llm_registry = LLMModelRegistry()
+        
+        # Register providers with their respective API keys
+        try:
+            if self.claude_api_key:
+                claude_provider = ClaudeProvider(self.claude_api_key)
+                self.llm_registry.register_provider("claude", claude_provider)
+        except Exception as e:
+            print(f"Warning: Could not initialize Claude provider: {e}")
+        
+        try:
+            if self.openai_api_key:
+                openai_provider = OpenAIProvider(self.openai_api_key)
+                self.llm_registry.register_provider("openai", openai_provider)
+        except Exception as e:
+            print(f"Warning: Could not initialize OpenAI provider: {e}")
+        
+        # Default model (first available model)
+        available_models = self.llm_registry.get_all_models()
+        self.selected_model = available_models[0] if available_models else None
         
         # Development/Testing: Hardcoded file path (set to None to disable, or provide full path)
         # Example: self.hardcoded_file_path = r"C:\Users\bob\Documents\test_document.docx"
@@ -217,9 +237,20 @@ class WordProcessorApp:
         ttk.Button(nav_frame_top, text="← Back to Masking", command=self.go_to_masking_tab).pack(side=tk.LEFT, padx=5)
         
         # API instructions section
+        # Model selection (top right)
+        model_selection_frame = ttk.Frame(self.tab3)
+        model_selection_frame.grid(row=1, column=0, columnspan=3, sticky=tk.E, padx=5, pady=5)
+        ttk.Label(model_selection_frame, text="Model:").pack(side=tk.LEFT, padx=5)
+        self.model_var = tk.StringVar()
+        self.model_combo = ttk.Combobox(model_selection_frame, textvariable=self.model_var, 
+                                        width=30, state="readonly")
+        self.model_combo.pack(side=tk.LEFT, padx=5)
+        self.model_combo.bind('<<ComboboxSelected>>', self.on_model_selected)
+        self.update_model_combo()
+        
         instructions_label_frame = ttk.Frame(self.tab3)
-        instructions_label_frame.grid(row=1, column=0, columnspan=3, sticky=tk.W, pady=5)
-        ttk.Label(instructions_label_frame, text="Claude API Instructions:").pack(side=tk.LEFT, padx=5)
+        instructions_label_frame.grid(row=2, column=0, columnspan=3, sticky=tk.W, pady=5)
+        ttk.Label(instructions_label_frame, text="LLM API Instructions:").pack(side=tk.LEFT, padx=5)
         
         # Instruction label selection
         ttk.Label(instructions_label_frame, text="Label:").pack(side=tk.LEFT, padx=5)
@@ -237,12 +268,12 @@ class WordProcessorApp:
         ttk.Button(buttons_frame, text="Delete", command=self.delete_instruction).pack(side=tk.LEFT, padx=2)
         
         # Instruction text area (editable)
-        ttk.Label(self.tab3, text="Instruction Text:").grid(row=2, column=0, sticky=(tk.W, tk.N), pady=5)
+        ttk.Label(self.tab3, text="Instruction Text:").grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
         self.instructions_text_area = scrolledtext.ScrolledText(self.tab3, height=5, width=80, wrap=tk.WORD)
-        self.instructions_text_area.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
+        self.instructions_text_area.grid(row=3, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         
         # Send button
-        ttk.Button(self.tab3, text="Send to Claude API", command=self.send_to_api).grid(row=3, column=1, columnspan=2, pady=5)
+        ttk.Button(self.tab3, text="Send to LLM API", command=self.send_to_api).grid(row=4, column=1, columnspan=2, pady=5)
         
         # Update instruction combo and load default
         self.update_instruction_combo()
@@ -251,21 +282,21 @@ class WordProcessorApp:
             self.on_instruction_label_selected()
         
         # Final text display
-        ttk.Label(self.tab3, text="Final Text (from Claude):").grid(row=4, column=0, sticky=(tk.W, tk.N), pady=5)
+        ttk.Label(self.tab3, text="Final Text (from LLM):").grid(row=5, column=0, sticky=(tk.W, tk.N), pady=5)
         final_text_frame = ttk.Frame(self.tab3)
-        final_text_frame.grid(row=4, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
+        final_text_frame.grid(row=5, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         self.final_text_area = scrolledtext.ScrolledText(final_text_frame, height=12, width=80, wrap=tk.WORD)
         self.final_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ttk.Button(final_text_frame, text="Copy Final Text", command=self.copy_final_text).pack(side=tk.LEFT, padx=5)
         
         # Chat messages section (below final text)
         chat_label_frame = ttk.Frame(self.tab3)
-        chat_label_frame.grid(row=5, column=0, columnspan=3, sticky=tk.W, pady=5)
+        chat_label_frame.grid(row=6, column=0, columnspan=3, sticky=tk.W, pady=5)
         ttk.Label(chat_label_frame, text="Continue conversation:").pack(side=tk.LEFT, padx=5)
         
         # Chat message template selection
         chat_template_frame = ttk.Frame(self.tab3)
-        chat_template_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
+        chat_template_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
         ttk.Label(chat_template_frame, text="Chat Message Label:").pack(side=tk.LEFT, padx=5)
         self.chat_label_var = tk.StringVar()
         self.chat_label_combo = ttk.Combobox(chat_template_frame, textvariable=self.chat_label_var, 
@@ -924,8 +955,8 @@ class WordProcessorApp:
             messagebox.showwarning("Warning", "Please extract and mask text first.")
             return
         
-        if not self.client:
-            messagebox.showerror("Error", "API key not configured. Please set your API key in the code.")
+        if not self.selected_model:
+            messagebox.showerror("Error", "No model selected. Please select a model from the dropdown.")
             return
         
         # Get instructions from text area
@@ -949,8 +980,8 @@ class WordProcessorApp:
             messagebox.showwarning("Warning", "Please extract and mask text first.")
             return
         
-        if not self.client:
-            messagebox.showerror("Error", "API key not configured. Please set your API key in the code.")
+        if not self.selected_model:
+            messagebox.showerror("Error", "No model selected. Please select a model from the dropdown.")
             return
         
         # Get chat input
@@ -969,8 +1000,19 @@ class WordProcessorApp:
         self._send_api_message(chat_message, is_first=False)
     
     def _send_api_message(self, user_message: str, is_first: bool = False):
-        """Internal method to send message to Claude API and handle response"""
+        """Internal method to send message to LLM API and handle response"""
         try:
+            # Validate model selection
+            if not self.selected_model:
+                messagebox.showerror("Error", "No model selected. Please select a model from the dropdown.")
+                return
+            
+            # Get provider for selected model
+            provider = self.llm_registry.get_provider_for_model(self.selected_model)
+            if not provider:
+                messagebox.showerror("Error", f"No provider found for model: {self.selected_model}")
+                return
+            
             # Show processing message
             # Note: Final text area is already cleared in send_to_api or send_chat_message
             self.final_text_area.insert(tk.END, "Processing... Please wait.")
@@ -982,15 +1024,12 @@ class WordProcessorApp:
                 "content": user_message
             })
             
-            # Call Claude API with full conversation history
-            message = self.client.messages.create(
-                model="claude-opus-4-5-20251101",
-                max_tokens=64000,
-                messages=self.conversation_history
+            # Call LLM API with full conversation history using abstraction layer
+            response_text = provider.send_message(
+                messages=self.conversation_history,
+                model=self.selected_model,
+                max_tokens=64000
             )
-            
-            # Get response
-            response_text = message.content[0].text if message.content else ""
             
             # Add assistant response to conversation history
             self.conversation_history.append({
@@ -1027,10 +1066,12 @@ class WordProcessorApp:
             self.final_text_area.see(tk.END)
             
             self.is_first_message = False
-            messagebox.showinfo("Success", "Message processed successfully by Claude API!")
+            model_display = self.llm_registry.get_model_display_name(self.selected_model)
+            messagebox.showinfo("Success", f"Message processed successfully by {model_display}!")
             
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to process message with Claude API: {str(e)}")
+            model_display = self.llm_registry.get_model_display_name(self.selected_model) if self.selected_model else "LLM"
+            messagebox.showerror("Error", f"Failed to process message with {model_display}: {str(e)}")
             # Remove processing message and show error
             content = self.final_text_area.get(1.0, tk.END)
             if "Processing... Please wait." in content:
@@ -1232,6 +1273,45 @@ class WordProcessorApp:
                     f.write(f'"{label}" :: "{escaped_text}"\n')
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save instructions: {str(e)}")
+    
+    def update_model_combo(self):
+        """Update the model selection dropdown with available models"""
+        available_models = self.llm_registry.get_all_models()
+        if not available_models:
+            self.model_combo['values'] = []
+            self.model_var.set("")
+            self.selected_model = None
+            return
+        
+        # Create display list with model display names
+        display_values = []
+        for model in available_models:
+            display_name = self.llm_registry.get_model_display_name(model)
+            display_values.append(f"{display_name} ({model})")
+        
+        self.model_combo['values'] = display_values
+        
+        # Set default selection if not already set
+        if self.selected_model and self.selected_model in available_models:
+            display_name = self.llm_registry.get_model_display_name(self.selected_model)
+            self.model_var.set(f"{display_name} ({self.selected_model})")
+        else:
+            # Select first model
+            self.selected_model = available_models[0]
+            display_name = self.llm_registry.get_model_display_name(self.selected_model)
+            self.model_var.set(f"{display_name} ({self.selected_model})")
+    
+    def on_model_selected(self, event=None):
+        """Handle model selection from dropdown"""
+        selection = self.model_var.get()
+        if not selection:
+            return
+        
+        # Extract model identifier from display string (format: "Display Name (model-id)")
+        if " (" in selection and selection.endswith(")"):
+            model_id = selection.split(" (")[-1].rstrip(")")
+            if model_id in self.llm_registry.get_all_models():
+                self.selected_model = model_id
     
     def update_instruction_combo(self):
         """Update the instruction label combobox with current labels"""
