@@ -124,7 +124,6 @@ class OpenAIProvider(LLMProvider):
             "gpt-5.2-pro",    # GPT-5.2 pro (uses /v1/responses endpoint)
             "gpt-5.2",        # GPT-5.2
             "gpt-5-nano",     # GPT-5 nano
-            "gpt-4.1",        # GPT-4.1
         ]
         # Models that use the /v1/responses endpoint instead of /v1/chat/completions
         self.responses_endpoint_models = {

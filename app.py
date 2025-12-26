@@ -1283,23 +1283,26 @@ class WordProcessorApp:
             self.selected_model = None
             return
         
-        # Create display list with model display names
+        # Create display list with simplified model names only
         display_values = []
+        model_display_map = {}  # Map display name to model ID
         for model in available_models:
             display_name = self.llm_registry.get_model_display_name(model)
-            display_values.append(f"{display_name} ({model})")
+            display_values.append(display_name)
+            model_display_map[display_name] = model
         
         self.model_combo['values'] = display_values
+        self.model_display_map = model_display_map  # Store mapping for selection
         
         # Set default selection if not already set
         if self.selected_model and self.selected_model in available_models:
             display_name = self.llm_registry.get_model_display_name(self.selected_model)
-            self.model_var.set(f"{display_name} ({self.selected_model})")
+            self.model_var.set(display_name)
         else:
             # Select first model
             self.selected_model = available_models[0]
             display_name = self.llm_registry.get_model_display_name(self.selected_model)
-            self.model_var.set(f"{display_name} ({self.selected_model})")
+            self.model_var.set(display_name)
     
     def on_model_selected(self, event=None):
         """Handle model selection from dropdown"""
@@ -1307,11 +1310,9 @@ class WordProcessorApp:
         if not selection:
             return
         
-        # Extract model identifier from display string (format: "Display Name (model-id)")
-        if " (" in selection and selection.endswith(")"):
-            model_id = selection.split(" (")[-1].rstrip(")")
-            if model_id in self.llm_registry.get_all_models():
-                self.selected_model = model_id
+        # Get model ID from display name mapping
+        if hasattr(self, 'model_display_map') and selection in self.model_display_map:
+            self.selected_model = self.model_display_map[selection]
     
     def update_instruction_combo(self):
         """Update the instruction label combobox with current labels"""
