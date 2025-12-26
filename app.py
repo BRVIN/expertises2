@@ -108,17 +108,17 @@ class WordProcessorApp:
         
         # Tab 1: Text Extraction
         self.tab1 = ttk.Frame(self.notebook, padding="10")
-        self.notebook.add(self.tab1, text="1. Text Extraction")
+        self.notebook.add(self.tab1, text="1. EXTRACTION")
         self.create_tab1()
         
         # Tab 2: Name Masking
         self.tab2 = ttk.Frame(self.notebook, padding="10")
-        self.notebook.add(self.tab2, text="2. Name Masking")
+        self.notebook.add(self.tab2, text="2. MASKING")
         self.create_tab2()
         
         # Tab 3: API & Results
         self.tab3 = ttk.Frame(self.notebook, padding="10")
-        self.notebook.add(self.tab3, text="3. API & Results")
+        self.notebook.add(self.tab3, text="3. CHATGPT")
         self.create_tab3()
     
     def create_tab1(self):
@@ -148,7 +148,7 @@ class WordProcessorApp:
             except Exception as e:
                 print(f"Warning: Could not enable drag-and-drop: {e}")
         
-        ttk.Button(self.tab1, text="Browse", command=self.browse_file).grid(row=0, column=2, padx=5)
+        ttk.Button(self.tab1, text="Select Document", command=self.browse_file).grid(row=0, column=2, padx=5)
         
         # Add hint label for drag-and-drop
         if DND_AVAILABLE:
@@ -193,7 +193,7 @@ class WordProcessorApp:
         # Navigation button to previous tab
         nav_frame_top = ttk.Frame(self.tab2)
         nav_frame_top.grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=5)
-        ttk.Button(nav_frame_top, text="← Back to Extraction", command=self.go_to_extraction_tab).pack(side=tk.LEFT, padx=5)
+        ttk.Button(nav_frame_top, text="← BACK", command=self.go_to_extraction_tab).pack(side=tk.LEFT, padx=5)
         
         # Names to mask section
         ttk.Label(self.tab2, text="Names/Surnames to Mask (comma-separated):").grid(row=1, column=0, sticky=tk.W, pady=5)
@@ -202,12 +202,12 @@ class WordProcessorApp:
         ttk.Button(self.tab2, text="Apply Masking", command=self.apply_masking).grid(row=1, column=2, padx=5)
         
         # Masking preview
-        ttk.Label(self.tab2, text="Masking Preview:").grid(row=2, column=0, sticky=(tk.W, tk.N), pady=5)
+        ttk.Label(self.tab2, text=".").grid(row=2, column=0, sticky=(tk.W, tk.N), pady=5)
         self.masking_preview_area = scrolledtext.ScrolledText(self.tab2, height=10, width=80, wrap=tk.WORD)
         self.masking_preview_area.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         
         # Changes list
-        ttk.Label(self.tab2, text="Changes (click to undo):").grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
+        ttk.Label(self.tab2, text="Changes :").grid(row=3, column=0, sticky=(tk.W, tk.N), pady=5)
         changes_frame = ttk.Frame(self.tab2)
         changes_frame.grid(row=3, column=1, sticky=(tk.W, tk.E), padx=5, pady=5)
         self.changes_listbox = tk.Listbox(changes_frame, height=5, width=50)
@@ -218,7 +218,7 @@ class WordProcessorApp:
         # Navigation button to next tab
         nav_frame_bottom = ttk.Frame(self.tab2)
         nav_frame_bottom.grid(row=4, column=0, columnspan=3, sticky=tk.E, pady=10)
-        ttk.Button(nav_frame_bottom, text="Continue to API →", command=self.go_to_api_tab).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(nav_frame_bottom, text="CONTINUE →", command=self.go_to_api_tab).pack(side=tk.RIGHT, padx=5)
         
         # Configure grid weights for resizing
         self.tab2.rowconfigure(2, weight=1)
