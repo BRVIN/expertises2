@@ -8,13 +8,15 @@ import unicodedata
 import os
 
 # Try to import tkinterdnd2 for drag-and-drop support
-try:
-    from tkinterdnd2 import DND_FILES, TkinterDnD
-    DND_AVAILABLE = True
-except ImportError:
-    DND_AVAILABLE = False
-    print("Note: tkinterdnd2 not available. Drag-and-drop will be disabled.")
-    print("Install it with: pip install tkinterdnd2")
+# DISABLED FOR NOW - Keep commented for later use
+# try:
+#     from tkinterdnd2 import DND_FILES, TkinterDnD
+#     DND_AVAILABLE = True
+# except ImportError:
+#     DND_AVAILABLE = False
+#     print("Note: tkinterdnd2 not available. Drag-and-drop will be disabled.")
+#     print("Install it with: pip install tkinterdnd2")
+DND_AVAILABLE = False  # Disabled for now
 
 
 class WordProcessorApp:
@@ -118,22 +120,24 @@ class WordProcessorApp:
         self.file_path_entry.grid(row=0, column=0, sticky=(tk.W, tk.E))
         
         # Enable drag-and-drop if available
-        if DND_AVAILABLE:
-            try:
-                self.file_path_entry.drop_target_register(DND_FILES)
-                self.file_path_entry.dnd_bind('<<Drop>>', self.on_file_drop)
-                # Also enable drop on the tab itself
-                self.tab1.drop_target_register(DND_FILES)
-                self.tab1.dnd_bind('<<Drop>>', self.on_file_drop)
-            except Exception as e:
-                print(f"Warning: Could not enable drag-and-drop: {e}")
+        # DISABLED FOR NOW - Keep commented for later use
+        # if DND_AVAILABLE:
+        #     try:
+        #         self.file_path_entry.drop_target_register(DND_FILES)
+        #         self.file_path_entry.dnd_bind('<<Drop>>', self.on_file_drop)
+        #         # Also enable drop on the tab itself
+        #         self.tab1.drop_target_register(DND_FILES)
+        #         self.tab1.dnd_bind('<<Drop>>', self.on_file_drop)
+        #     except Exception as e:
+        #         print(f"Warning: Could not enable drag-and-drop: {e}")
         
         ttk.Button(self.tab1, text="Browse", command=self.browse_file).grid(row=0, column=2, padx=5)
         
         # Add hint label for drag-and-drop
-        if DND_AVAILABLE:
-            hint_label = ttk.Label(self.tab1, text="(Drag and drop .docx file here)", font=("TkDefaultFont", 8), foreground="gray")
-            hint_label.grid(row=1, column=1, sticky=tk.W, padx=5)
+        # DISABLED FOR NOW - Keep commented for later use
+        # if DND_AVAILABLE:
+        #     hint_label = ttk.Label(self.tab1, text="(Drag and drop .docx file here)", font=("TkDefaultFont", 8), foreground="gray")
+        #     hint_label.grid(row=1, column=1, sticky=tk.W, padx=5)
         
         # Extraction range section
         ttk.Label(self.tab1, text="Start Word (wordA):").grid(row=1, column=0, sticky=tk.W, pady=5)
@@ -355,18 +359,19 @@ class WordProcessorApp:
         
         return None
     
-    def on_file_drop(self, event):
-        """Handle file drop event"""
-        # Get the dropped file path(s)
-        files = self.root.tk.splitlist(event.data)
-        if files:
-            file_path = files[0].strip('{}')  # Remove curly braces that Windows adds
-            # Validate it's a .docx file
-            if file_path.lower().endswith('.docx'):
-                self.file_path_var.set(file_path)
-                self.load_document(file_path)
-            else:
-                messagebox.showwarning("Warning", "Please drop a .docx file (Word document).")
+    # DISABLED FOR NOW - Keep commented for later use
+    # def on_file_drop(self, event):
+    #     """Handle file drop event"""
+    #     # Get the dropped file path(s)
+    #     files = self.root.tk.splitlist(event.data)
+    #     if files:
+    #         file_path = files[0].strip('{}')  # Remove curly braces that Windows adds
+    #         # Validate it's a .docx file
+    #         if file_path.lower().endswith('.docx'):
+    #             self.file_path_var.set(file_path)
+    #             self.load_document(file_path)
+    #         else:
+    #             messagebox.showwarning("Warning", "Please drop a .docx file (Word document).")
     
     def browse_file(self):
         """Open file dialog to select Word document"""
@@ -1322,10 +1327,12 @@ class WordProcessorApp:
 
 def main():
     # Use TkinterDnD if available, otherwise use regular Tk
-    if DND_AVAILABLE:
-        root = TkinterDnD.Tk()
-    else:
-        root = tk.Tk()
+    # DISABLED FOR NOW - Keep commented for later use
+    # if DND_AVAILABLE:
+    #     root = TkinterDnD.Tk()
+    # else:
+    #     root = tk.Tk()
+    root = tk.Tk()  # Using regular Tk since drag-and-drop is disabled
     app = WordProcessorApp(root)
     root.mainloop()
 
